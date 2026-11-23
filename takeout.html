@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bea's Restaurant - To-Go POS</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 15px;
+    background: #ececec;
+    display: flex;
+    gap: 15px;
+    height: 100vh;
+  }
+  .pos-controls {
+    flex: 2.3;
+    background: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    overflow-y: auto;
+  }
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 2px solid #8b0000;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .header-bar h2 { margin: 0; color: #8b0000; font-size: 20px; }
+  .daily-reminder {
+    background: #fff8e1;
+    color: #6d4c00;
+    border: 1px solid #f0d58c;
+    border-left: 4px solid #d97706;
+    border-radius: 5px;
+    padding: 7px 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .daily-reminder strong { color: #8b0000; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+  }
+  .drink-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+  }
+  .drink-bar select {
+    flex: 1;
+    font-weight: bold;
+    border: 1.5px solid #2c5282;
+    padding: 9px;
+    cursor: pointer;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #444;
+    margin: 12px 0 6px 0;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 7px;
+  }
+  .menu-btn {
+    padding: 9px 6px;
+    font-size: 13px;
+    font-weight: bold;
+    background: #8b0000;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .menu-btn:hover { background: #a80000; }
+  .menu-btn.bulk { background: #1e4d2b; }
+  .menu-btn.bulk:hover { background: #29663a; }
+  .menu-btn.side { background: #2c5282; }
+  .menu-btn.side:hover { background: #3b6ba8; }
+  .menu-btn.dessert { background: #6b21a8; }
+  .menu-btn.dessert:hover { background: #7e22ce; }
+  .menu-btn span { display: block; font-size: 12px; font-weight: normal; margin-top: 3px; color: #f8f8f8; }
+  .action-btns { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
+  .star-btn {
+    flex: 2;
+    min-width: 170px;
+    padding: 13px;
+    font-size: 16px;
+    font-weight: bold;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .star-btn:hover { background: #0b5ed7; }
+  .print-btn {
+    flex: 1.5;
+    min-width: 140px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: bold;
+    background: #218838;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .print-btn:hover { background: #1e7e34; }
+  .clear-btn {
+    flex: 1;
+    min-width: 110px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: bold;
+    background: #c82333;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.65);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-box {
+    background: #fff;
+    color: #111;
+    width: 92%;
+    max-width: 780px;
+    max-height: 90vh;
+    border-radius: 10px;
+    padding: 18px;
+    overflow-y: auto;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.35);
+  }
+  .modal-box.picker-box {
+    max-width: 560px;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid #8b0000;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .modal-header h3 { margin: 0; color: #8b0000; font-size: 18px; }
+  .counter-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .counter-pill {
+    background: #8b0000;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .counter-pill.over-limit {
+    background: #d9534f;
+    box-shadow: 0 0 0 2px #ffcccc;
+  }
+  .counter-pill.meat-pill {
+    background: #b45309;
+  }
+  .counter-pill.selected-meat {
+    background: #1e4d2b;
+  }
+  .counter-pill.drink-pill {
+    background: #2c5282;
+  }
+  .counter-pill.condiment-pill {
+    background: #137333;
+  }
+  .counter-pill.dessert-pill {
+    background: #6b21a8;
+  }
+  .counter-pill.bread-pill {
+    background: #7c3aed;
+  }
+  .extra-warning {
+    display: none;
+    background: #f8d7da;
+    color: #721c24;
+    border: 1.5px solid #f5c6cb;
+    border-left: 5px solid #c82333;
+    border-radius: 5px;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .day-warning {
+    display: none;
+    background: #fff3cd;
+    color: #664d03;
+    border: 1.5px solid #ffecb5;
+    border-left: 5px solid #d97706;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .builder-cat {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #555;
+    margin: 10px 0 6px;
+  }
+  .builder-cat.condiment-cat {
+    color: #137333;
+  }
+  .builder-drink-select {
+    max-width: 380px;
+    font-weight: bold;
+    border: 1.5px solid #2c5282;
+    padding: 9px;
+  }
+  .preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .preset-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    background: #e2f0fb;
+    color: #1b4f72;
+    border: 1px solid #7ab8e8;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .preset-btn:hover { background: #cde5f8; }
+  .builder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 6px;
+  }
+  .qty-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f7f7f7;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .qty-card.active { background: #fff3cd; border-color: #d39e00; }
+  .qty-card.condiment-card { background: #f4faf5; border-color: #b7dfc0; }
+  .qty-card.condiment-card.active { background: #d4edda; border-color: #28a745; }
+  .qty-card .price-sub { display: block; font-size: 11px; font-weight: normal; color: #555; }
+  .select-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    background: #f7f7f7;
+    color: #111;
+    border: 1.5px solid #ccc;
+    border-radius: 5px;
+    padding: 9px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .select-card:hover { background: #ececec; }
+  .select-card.active {
+    background: #fff3cd;
+    border-color: #d39e00;
+    color: #111;
+  }
+  .picker-btn {
+    padding: 11px 10px;
+    font-size: 13px;
+    font-weight: bold;
+    background: #2c5282;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .picker-btn:hover { background: #3b6ba8; }
+  .picker-btn.dessert-pick { background: #6b21a8; }
+  .picker-btn.dessert-pick:hover { background: #7e22ce; }
+  .select-check {
+    font-size: 13px;
+    font-weight: bold;
+    color: #1e4d2b;
+  }
+  .qty-controls { display: flex; align-items: center; gap: 5px; }
+  .qbtn {
+    width: 26px; height: 26px;
+    border: none; border-radius: 4px;
+    font-size: 16px; font-weight: bold;
+    cursor: pointer; color: #fff;
+  }
+  .qbtn.minus { background: #dc3545; }
+  .qbtn.plus { background: #28a745; }
+  .qnum { min-width: 16px; text-align: center; font-size: 14px; }
+  .qnum-editable {
+    min-width: 24px;
+    text-align: center;
+    font-size: 14px;
+    padding: 2px 4px;
+    border: 1px dashed #888;
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .qnum-editable:hover { border-color: #8b0000; background: #fff8e1; }
+  .modal-footer {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+  }
+  .ticket-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    overflow-y: auto;
+  }
+  #receipt {
+    width: 72mm;
+    background: #fff;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    color: #000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    height: fit-content;
+  }
+  .center { text-align: center; }
+  .bold { font-weight: bold; }
+  .divider { border-top: 1px dashed #000; margin: 7px 0; }
+  .item-block { margin-bottom: 6px; }
+  .item-row { display: flex; justify-content: space-between; font-weight: bold; }
+  .mod-line { padding-left: 14px; font-size: 12px; display: flex; justify-content: space-between; }
+  .remove-x { color: #d00; cursor: pointer; font-weight: bold; margin-right: 4px; }
+  .weigh-banner {
+    display: none;
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    border: 1px solid #000;
+    padding: 3px;
+    margin-bottom: 6px;
+  }
+  .weigh-item-line {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  @media (max-width: 900px) {
+    body {
+      flex-direction: column;
+      height: auto;
+      padding: 10px;
+    }
+    .pos-controls {
+      overflow-y: visible;
+      padding: 12px;
+    }
+    .ticket-wrapper {
+      overflow-y: visible;
+      padding-bottom: 20px;
+    }
+  }
+  @media print {
+    body * { visibility: hidden; }
+    body { background: #fff; padding: 0; margin: 0; height: auto; }
+    #receipt, #receipt * { visibility: visible; }
+    #receipt {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 72mm;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+    }
+    .remove-x { display: none; }
+    @page { margin: 0; size: 80mm auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="pos-controls">
+    <div class="header-bar">
+      <h2>BEA'S RESTAURANT — TO-GO ORDER</h2>
+      <span style="font-size:12px; color:#555;">423-867-3618 • Wed–Sun 11am–8pm</span>
+    </div>
+    <div class="daily-reminder" id="dailyReminderBar"></div>
+    <div class="form-row">
+      <input type="text" id="custName" placeholder="Customer Name" oninput="updateTicket()">
+      <input type="text" id="custPhone" placeholder="Phone Number" oninput="updateTicket()">
+    </div>
+
+    <div class="section-title">1. Carry-Out Meals & Family Packages (Tap to Build)</div>
+    <div class="menu-grid" id="mealGrid"></div>
+
+    <div class="section-title">2. Meats by the Pound, Piece & Wings (All Meats Weighed in Back)</div>
+    <div class="menu-grid" id="bulkGrid"></div>
+    <div class="section-title">3. A La Carte Sides, Desserts, Bread & Drinks (2× 8 oz auto-converts to 1 Pint)</div>
+    <div class="menu-grid" id="sideGrid"></div>
+    <div class="drink-bar">
+      <select id="aLaCarteDrink" onchange="addALaCarteDrink()"></select>
+    </div>
+    <div class="section-title">4. Kitchen Notes</div>
+    <textarea id="orderNotes" rows="2" placeholder="e.g., White meat only, extra gravy, light ice..." oninput="updateTicket()"></textarea>
+    <div class="action-btns">
+      <button class="clear-btn" onclick="clearOrder()">Clear Order</button>
+      <button class="star-btn" onclick="printToStar()">Print Star (Phone)</button>
+      <button class="print-btn" onclick="printTicket()">Browser Print (PC)</button>
+    </div>
+  </div>
+
+  <!-- Meal / Family Package Builder Modal -->
+  <div class="modal-overlay" id="plateModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">Build To-Go Plate</h3>
+        <div class="counter-group" id="counterGroup"></div>
+      </div>
+      <div class="daily-reminder" style="margin-bottom:8px;">
+        <strong>Daily Offerings:</strong> Ribs (Thu) & other day-labeled meats/sides are only served on that day unless running as a special today.
+      </div>
+      <div class="day-warning" id="dayWarning"></div>
+      <div class="extra-warning" id="extraWarning"></div>
+      <div id="builderContent"></div>
+      <div class="modal-footer">
+        <button class="clear-btn" onclick="closeBuilder()">Cancel</button>
+        <button class="print-btn" id="confirmPlateBtn" onclick="confirmPlate()">Add to Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- A La Carte Side / Cobbler Picker Modal -->
+  <div class="modal-overlay" id="sidePickerModal">
+    <div class="modal-box picker-box">
+      <div class="modal-header">
+        <h3 id="pickerTitle">Choose Side</h3>
+      </div>
+      <div class="daily-reminder" id="pickerReminder" style="margin-bottom:8px;">
+        <strong>Reminder:</strong> Day-labeled sides (Thu–Sat) are only available on that day unless running as a special today.
+      </div>
+      <div class="builder-grid" id="pickerGrid"></div>
+      <div class="modal-footer">
+        <button class="clear-btn" onclick="closeSidePicker()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticket-wrapper">
+    <div id="receipt">
+      <div class="center" style="margin-bottom: 3px;">
+        <svg width="105" height="68" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 42 74 L 78 74 L 70 63 L 50 63 Z" fill="#000"/>
+          <rect x="35" y="74" width="50" height="4" rx="2" fill="#000"/>
+          <ellipse cx="60" cy="48" rx="54" ry="16" fill="#fff" stroke="#000" stroke-width="3.5"/>
+          <ellipse cx="60" cy="48" rx="46" ry="12" fill="none" stroke="#000" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M 28 38 C 28 45, 48 45, 48 38 Z" fill="#000"/>
+          <ellipse cx="38" cy="38" rx="10" ry="3.5" fill="#fff" stroke="#000" stroke-width="2"/>
+          <path d="M 72 38 C 72 45, 92 45, 92 38 Z" fill="#000"/>
+          <ellipse cx="82" cy="38" rx="10" ry="3.5" fill="#fff" stroke="#000" stroke-width="2"/>
+          <path d="M 47 45 C 47 53, 73 53, 73 45 Z" fill="#000"/>
+          <ellipse cx="60" cy="45" rx="13" ry="4.5" fill="#fff" stroke="#000" stroke-width="2.5"/>
+          <path d="M 20 49 C 20 57, 42 57, 42 49 Z" fill="#000"/>
+          <ellipse cx="31" cy="49" rx="11" ry="4" fill="#fff" stroke="#000" stroke-width="2"/>
+          <path d="M 78 49 C 78 57, 100 57, 100 49 Z" fill="#000"/>
+          <ellipse cx="89" cy="49" rx="11" ry="4" fill="#fff" stroke="#000" stroke-width="2"/>
+          <path d="M 10 61 Q 22 69 36 68" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="38,68 31,64 32,71" fill="#000"/>
+          <path d="M 110 61 Q 98 69 84 68" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="82,68 89,64 88,71" fill="#000"/>
+        </svg>
+      </div>
+      <div class="center bold" style="font-size: 19px; letter-spacing: 1px;">BEA'S RESTAURANT</div>
+      <div class="center bold" style="font-size: 11px;">GOOD FOOD. GREAT MEMORIES. • EST. 1950</div>
+      <div class="center" style="font-size: 11px;">4500 Dodds Ave • Chattanooga, TN 37407</div>
+      <div class="center" style="font-size: 11px;">(423) 867-3618</div>
+      <div class="center bold" style="font-size: 15px; margin-top: 6px; border: 1.5px solid #000; padding: 2px;">TO-GO ORDER</div>
+      <div class="divider"></div>
+      <div id="tTime" style="font-size: 12px;"></div>
+      <div id="tCust" class="bold"></div>
+      <div id="tPhone"></div>
+      <div class="divider"></div>
+      <div id="tItems"></div>
+      <div class="divider"></div>
+      <div id="tNotes" class="bold" style="white-space: pre-wrap;"></div>
+      <div class="divider" id="noteDiv" style="display:none;"></div>
+      <div class="item-row"><span id="tSubLabel">Subtotal:</span><span id="tSub">$0.00</span></div>
+      <div class="weigh-banner" id="weighBanner">** WEIGH IN BACK — WRITE EACH ITEM **</div>
+      <div id="weighBreakdown"></div>
+      <div class="item-row" style="font-weight:normal;"><span>TN Tax (9.25%):</span><span id="tTax">$0.00</span></div>
+      <div class="item-row" style="font-size: 16px; margin-top: 3px;"><span>TOTAL:</span><span id="tTotal">$0.00</span></div>
+      <div class="divider"></div>
+      <div class="center" style="font-size: 11px;">Thank you for dining with Bea's!</div>
+    </div>
+  </div>
+<script>
+  // Day-of-week helpers for Daily Specials reminders
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const DAY_PREFIX_MAP = { "Sun:": 0, "Wed:": 3, "Thu:": 4, "Fri:": 5, "Sat:": 6 };
+
+  function initDailyReminder() {
+    const todayName = DAY_NAMES[new Date().getDay()];
+    document.getElementById('dailyReminderBar').innerHTML =
+      `<strong>Today is ${todayName} — Daily Offerings Reminder:</strong> Ribs (Thu) and all other day-specific meats or sides (Wed–Sun) are only available on their scheduled day unless we are running a special or extra line item today.`;
+  }
+
+  function getScheduledDayIndex(label, key) {
+    for (const [prefix, dayIdx] of Object.entries(DAY_PREFIX_MAP)) {
+      if (label.startsWith(prefix)) return dayIdx;
+    }
+    if (key === "Extra:HalfRibs" || key === "Extra:FullRibs") return 4; // Thursday
+    return null;
+  }
+
+  // Side, Dessert, Bread & Cinnamon Bun pricing constants
+  const SIDE_8OZ_PRICE = 5.25;
+  const SIDE_16OZ_PRICE = 8.25;
+  const DESSERT_MARKUP = 22.55 / 18.31;
+  const DESSERT_8OZ_PRICE = +(SIDE_8OZ_PRICE * DESSERT_MARKUP).toFixed(2);   // $6.47
+  const DESSERT_16OZ_PRICE = +(SIDE_16OZ_PRICE * DESSERT_MARKUP).toFixed(2); // $10.16
+  const ROLL_PRICE = 0.45;
+  const CORNBREAD_PRICE = 0.55;
+  const CINNA_BUN_PRICE = 2.50;
+
+  // Condiments & sauces: first 2 are free, then $0.45 each
+  const FREE_CONDIMENT_LIMIT = 2;
+  const EXTRA_CONDIMENT_PRICE = 0.45;
+
+  // Edit standalone drink prices & meal upcharges here
+  const drinkOptions = [
+    { name: "Coke", price: 2.75, mealUpcharge: 0 },
+    { name: "Diet Coke", price: 2.75, mealUpcharge: 0 },
+    { name: "Coke Zero", price: 2.75, mealUpcharge: 0 },
+    { name: "Lemonade", price: 2.75, mealUpcharge: 0 },
+    { name: "Dr Pepper", price: 2.75, mealUpcharge: 0 },
+    { name: "Sweet Tea", price: 2.75, mealUpcharge: 0 },
+    { name: "Unsweet Tea", price: 2.75, mealUpcharge: 0 },
+    { name: "Arnold Palmer", price: 2.75, mealUpcharge: 0 },
+    { name: "Water (Cup & Water)", price: 0.28, mealUpcharge: 0 },
+    { name: "20 oz Bottled Drink", price: 3.25, mealUpcharge: 1.75, is20oz: true },
+    { name: "16 oz Coffee", price: 2.50, mealUpcharge: 0 }
+  ];
+
+  // All meats are weighed in back & written on ticket; Dumplings are fixed 8oz / 16oz sides
+  const extraMeatOptions = [
+    { key: "Extra:ChickenPc", label: "Chicken (Per Piece)", ticketLabel: "pc Chicken", price: 0, weighInBack: true, perPiece: true },
+    { key: "Extra:QuarterBBQ", label: "1/4 lb BBQ Pork", ticketLabel: "1/4 lb BBQ Pork", price: 0, weighInBack: true, weightGroup: "BBQ Pork", quarters: 1 },
+    { key: "Extra:HalfBBQ", label: "1/2 lb BBQ Pork", ticketLabel: "1/2 lb BBQ Pork", price: 0, weighInBack: true, weightGroup: "BBQ Pork", quarters: 2 },
+    { key: "Extra:QuarterHam", label: "1/4 lb Baked Ham", ticketLabel: "1/4 lb Baked Ham", price: 0, weighInBack: true, weightGroup: "Baked Ham", quarters: 1 },
+    { key: "Extra:HalfHam", label: "1/2 lb Baked Ham", ticketLabel: "1/2 lb Baked Ham", price: 0, weighInBack: true, weightGroup: "Baked Ham", quarters: 2 },
+    { key: "Extra:FullHam", label: "1 lb Baked Ham", ticketLabel: "1 lb Baked Ham", price: 0, weighInBack: true, weightGroup: "Baked Ham", quarters: 4 },
+    { key: "Extra:HalfRibs", label: "1/2 lb Pork Ribs (Thu)", ticketLabel: "1/2 lb Pork Ribs (Thu)", price: 0, weighInBack: true, weightGroup: "Pork Ribs (Thu)", quarters: 2 },
+    { key: "Extra:FullRibs", label: "1 lb Pork Ribs (Thu)", ticketLabel: "1 lb Pork Ribs (Thu)", price: 0, weighInBack: true, weightGroup: "Pork Ribs (Thu)", quarters: 4 },
+    { key: "Extra:Dumplings8", label: "8 oz Dumplings", ticketLabel: "8 oz Dumplings", price: SIDE_8OZ_PRICE, weighInBack: false, convertGroup: "dumpling8" },
+    { key: "Extra:Dumplings16", label: "16 oz Dumplings", ticketLabel: "16 oz Dumplings", price: SIDE_16OZ_PRICE, weighInBack: false }
+  ];
+
+  // First 2 free upon request — $0.45 each after 2
+  const freeCondiments = [
+    "Chow Chow", "Onion", "BBQ Sauce", "Tartar Sauce",
+    "Comeback Sauce", "Ranch", "Hot Sauce", "Ketchup"
+  ];
+
+  const meals = [
+    { name: "To-Go Dinner (Fountain/Tea)", price: 16.25, build: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
+    { name: "To-Go Plate (20oz Drink)", price: 18.00, build: true, includes20oz: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
+    { name: "Veg Plate", price: 13.25, build: true, noMeat: true, maxSides: 5, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fiveSidesNoFreeDessert: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
+    { name: "Family Meal (8pc Chicken)", price: 57.25, build: true, familyMode: true, maxSides: 3, sideLabel: "Pints", extraSidePrice: SIDE_16OZ_PRICE, extraDessertPrice: DESSERT_16OZ_PRICE, extraUnit: "Pint", maxBread: 8 },
+    { name: "Family Feast (12pc Chicken)", price: 77.50, build: true, familyMode: true, maxSides: 4, sideLabel: "Pints", extraSidePrice: SIDE_16OZ_PRICE, extraDessertPrice: DESSERT_16OZ_PRICE, extraUnit: "Pint", maxBread: 12 }
+  ];
+
+  // All meats by the pound/piece are weighed in back and written on the ticket
+  const bulkMeats = [
+    { name: "1 pc Chicken", price: 0, weighInBack: true },
+    { name: "Chicken (# Pcs)", price: 0, askQty: true, weighInBack: true, qtyLabel: "pc Chicken" },
+    { name: "1 lb Chicken", price: 0, rate: 14.25, weighInBack: true },
+    { name: "1/4 lb BBQ Pork", price: 0, weighInBack: true, weightGroup: "BBQ Pork", quarters: 1 },
+    { name: "1/2 lb BBQ Pork", price: 0, weighInBack: true, weightGroup: "BBQ Pork", quarters: 2 },
+    { name: "1 lb BBQ Pork", price: 0, rate: 17.50, weighInBack: true, weightGroup: "BBQ Pork", quarters: 4 },
+    { name: "1/4 lb Baked Ham", price: 0, weighInBack: true, weightGroup: "Baked Ham", quarters: 1 },
+    { name: "1/2 lb Baked Ham", price: 0, weighInBack: true, weightGroup: "Baked Ham", quarters: 2 },
+    { name: "1 lb Baked Ham", price: 0, rate: 14.99, weighInBack: true, weightGroup: "Baked Ham", quarters: 4 },
+    { name: "1/2 lb Pork Ribs (Thu)", price: 0, weighInBack: true, weightGroup: "Pork Ribs (Thu)", quarters: 2 },
+    { name: "1 lb Pork Ribs (Thu)", price: 0, rate: 18.99, weighInBack: true, weightGroup: "Pork Ribs (Thu)", quarters: 4 },
+    { name: "1 lb Fish (Fri)", price: 0, rate: 14.25, weighInBack: true },
+    { name: "1 lb Brisket", price: 0, rate: 25.00, weighInBack: true },
+    { name: "Burnt Ends", price: 0, weighInBack: true },
+    { name: "Roast Beef & Gravy", price: 0, weighInBack: true },
+    { name: "Chicken Livers", price: 0, weighInBack: true },
+    { name: "Kraut & Sausage", price: 0, weighInBack: true },
+    { name: "Smoked Turkey", price: 0, weighInBack: true },
+    { name: "1 lb Turkey", price: 0, rate: 17.50, weighInBack: true },
+    { name: "8 pc Hot Wings", price: 9.15 },
+    { name: "14 pc Hot Wings", price: 15.99 }
+  ];
+
+  const sidesAndBakery = [
+    { name: "Yeast Rolls (# Pcs)", unitPrice: ROLL_PRICE, askQty: true, qtyLabel: "Yeast Roll", pluralLabel: "Yeast Rolls", defaultQty: "2" },
+    { name: "Cornbread (# Pcs)", unitPrice: CORNBREAD_PRICE, askQty: true, qtyLabel: "Cornbread", pluralLabel: "Cornbread", defaultQty: "2" },
+    { name: "Dusty's Cinna Buns (# Pcs)", unitPrice: CINNA_BUN_PRICE, askQty: true, qtyLabel: "Dusty's Cinna Bun", pluralLabel: "Dusty's Cinna Buns", defaultQty: "2", btnClass: "dessert" },
+    { name: "8 oz Side", price: SIDE_8OZ_PRICE, pickType: "side", sizeLabel: "8 oz", convertGroup: "side8" },
+    { name: "16 oz Side (Pint)", price: SIDE_16OZ_PRICE, pickType: "side", sizeLabel: "16 oz", suffix: " (Pint)" },
+    { name: "8 oz Dessert", price: DESSERT_8OZ_PRICE, pickType: "cobbler", sizeLabel: "8 oz", convertGroup: "dessert8", btnClass: "dessert" },
+    { name: "16 oz Dessert (Pint)", price: DESSERT_16OZ_PRICE, pickType: "cobbler", sizeLabel: "16 oz", suffix: " (Pint)", btnClass: "dessert" },
+    { name: "8 oz Dumplings", price: SIDE_8OZ_PRICE, convertGroup: "dumpling8", itemTitle: "Dumplings" },
+    { name: "16 oz Dumplings (Pint)", price: SIDE_16OZ_PRICE },
+    { name: "1/2 Gal Side", price: 18.31, pickType: "side", sizeLabel: "1/2 Gal" },
+    { name: "Pt. Chow Chow", price: 13.50 },
+    { name: "Gal Tea", price: 6.25 },
+    { name: "1/2 Gal Dumplings", price: 24.99 },
+    { name: "1/2 Gal Spaghetti + 6 Rolls (Wed)", price: 18.31 },
+    { name: "1/2 Gal Chk & Dumplings + 6 Rolls (Sat)", price: 18.31 },
+    { name: "1/2 Gal Cobbler", price: 22.55, pickType: "cobbler", sizeLabel: "1/2 Gal", btnClass: "dessert" }
+  ];
+
+  const meatItems = [
+    "Fried Chicken", "Pulled Pork BBQ", "Baked Ham", "Brisket", "Burnt Ends",
+    "Roast Beef & Gravy", "Chicken Livers", "Kraut & Sausage", "Smoked Turkey",
+    "Wed: Spaghetti", "Thu: Smoked Ribs", "Fri: Catfish",
+    "Sat: Chk & Dumplings", "Sun: Special Meat"
+  ];
+
+  const sideItems = [
+    "Potatoes in Creme Sauce", "Pinto Beans", "Collard Greens", "Coleslaw",
+    "Potato Salad", "Pickled Beets", "French Fries",
+    "Lima Beans", "Cornbread Dressing", "Navy Beans", "Butter Beans", "Stewed Cabbage",
+    "Thu: Candied Yams", "Fri: Macaroni", "Sat: Fried Okra"
+  ];
+
+  const cobblerItems = [
+    "Peach Cobbler", "Apple Cobbler", "Cherry Cobbler",
+    "Pecan Cobbler", "Blueberry Cobbler", "Blackberry Cobbler"
+  ];
+
+  const plateDessertItems = [
+    "Cinnamon Buns", ...cobblerItems
+  ];
+
+  const KEYBOARD_QTY_ITEMS = new Set(["Yeast Rolls", "Cornbread", "Cinnamon Buns"]);
+
+  let cart = [];
+  let pendingPlate = null;
+  let pendingSidePicker = null;
+  let builderCounts = {};
+  let builderDrink = "";
+
+  function escapeJsSingleQuote(str) {
+    return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  // Converts quarter-pound increments (1 = 1/4 lb, 2 = 1/2 lb, 3 = 3/4 lb, 4 = 1 lb, 6 = 1 1/2 lb) into readable lb text
+  function formatQuartersToWeight(quarters, meatGroup, isMod) {
+    const whole = Math.floor(quarters / 4);
+    const rem = quarters % 4;
+    const fracMap = { 1: "1/4", 2: "1/2", 3: "3/4" };
+    let wtStr = "";
+    if (whole > 0 && rem > 0) wtStr = `${whole} ${fracMap[rem]} lb`;
+    else if (whole > 0) wtStr = `${whole} lb`;
+    else wtStr = `${fracMap[rem]} lb`;
+
+    return isMod
+      ? `+${wtStr} ${meatGroup} (WEIGH)`
+      : `${wtStr} ${meatGroup} (WEIGH)`;
+  }
+
+  function addWeightedMeatWithSum(meatGroup, quartersToAdd) {
+    const existingCartIdx = cart.findIndex(c => c.weightGroup === meatGroup);
+    if (existingCartIdx !== -1) {
+      const first = cart[existingCartIdx];
+      const newQ = (first.quarters || 0) + quartersToAdd;
+      cart[existingCartIdx] = {
+        name: formatQuartersToWeight(newQ, meatGroup, false),
+        price: 0,
+        weigh: true,
+        weightGroup: meatGroup,
+        quarters: newQ,
+        mods: first.mods
+      };
+      updateTicket();
+      return;
+    }
+
+    cart.push({
+      name: formatQuartersToWeight(quartersToAdd, meatGroup, false),
+      price: 0,
+      weigh: true,
+      weightGroup: meatGroup,
+      quarters: quartersToAdd,
+      mods: []
+    });
+    updateTicket();
+  }
+
+  // Automatically convert 2x 8 oz sides/cobblers/dumplings in cart into 1 Pint
+  function add8ozItemWithAutoConvert(convertGroup, itemTitle, basePrice) {
+    const existingIdx = cart.findIndex(c => c.convertGroup === convertGroup);
+    if (existingIdx !== -1) {
+      const first = cart[existingIdx];
+      const pintPrice = convertGroup === 'dessert8' ? DESSERT_16OZ_PRICE : SIDE_16OZ_PRICE;
+      const mergedMods = [...first.mods];
+      let newName;
+
+      if (first.itemTitle === itemTitle) {
+        newName = `16 oz ${itemTitle} (Pint — 2x 8 oz)`;
+      } else {
+        const labelWord = convertGroup === 'dessert8' ? 'Dessert' : 'Sides';
+        newName = `1 Pint (2x 8 oz ${labelWord})`;
+        mergedMods.unshift(
+          { label: `8 oz ${first.itemTitle}`, price: 0, weigh: false },
+          { label: `8 oz ${itemTitle}`, price: 0, weigh: false }
+        );
+      }
+
+      cart[existingIdx] = {
+        name: newName,
+        price: +(pintPrice + mergedMods.reduce((s, m) => s + (m.price || 0), 0)).toFixed(2),
+        weigh: false,
+        mods: mergedMods
+      };
+      updateTicket();
+      return;
+    }
+
+    cart.push({
+      name: `8 oz ${itemTitle}`,
+      price: basePrice,
+      weigh: false,
+      convertGroup,
+      itemTitle,
+      mods: []
+    });
+    updateTicket();
+  }
+
+  function openSidePicker(item) {
+    pendingSidePicker = item;
+    const isCobbler = item.pickType === 'cobbler';
+    const list = isCobbler ? cobblerItems : sideItems;
+
+    document.getElementById('pickerTitle').innerText = `Choose ${item.name} ($${item.price.toFixed(2)})`;
+    document.getElementById('pickerReminder').style.display = item.pickType === 'side' ? 'block' : 'none';
+
+    const grid = document.getElementById('pickerGrid');
+    grid.innerHTML = '';
+
+    list.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `picker-btn ${isCobbler ? 'dessert-pick' : ''}`;
+      btn.innerText = choice;
+      btn.onclick = () => {
+        if (item.convertGroup) {
+          add8ozItemWithAutoConvert(item.convertGroup, choice, item.price);
+        } else {
+          const suffix = item.suffix || '';
+          cart.push({
+            name: `${item.sizeLabel} ${choice}${suffix}`,
+            price: item.price,
+            weigh: false,
+            mods: []
+          });
+          updateTicket();
+        }
+        closeSidePicker();
+      };
+      grid.appendChild(btn);
+    });
+
+    document.getElementById('sidePickerModal').style.display = 'flex';
+  }
+
+  function closeSidePicker() {
+    document.getElementById('sidePickerModal').style.display = 'none';
+    pendingSidePicker = null;
+  }
+
+  function populateALaCarteDrinks() {
+    const sel = document.getElementById('aLaCarteDrink');
+    sel.innerHTML = '<option value="">+ Tap to Add A La Carte Drink...</option>';
+    drinkOptions.forEach((d, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.innerText = `${d.name} — $${d.price.toFixed(2)}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  function addALaCarteDrink() {
+    const sel = document.getElementById('aLaCarteDrink');
+    if (sel.value === "") return;
+    const idx = parseInt(sel.value, 10);
+    const drink = drinkOptions[idx];
+    if (!drink) return;
+    cart.push({ name: drink.name, price: drink.price, weigh: false, mods: [] });
+    sel.value = "";
+    updateTicket();
+  }
+
+  function getDrinkMealUpcharge(drinkName, plate) {
+    if (!drinkName) return 0;
+    const d = drinkOptions.find(opt => opt.name === drinkName);
+    if (!d) return 0;
+    if (d.is20oz && plate && plate.includes20oz) return 0;
+    return d.mealUpcharge || 0;
+  }
+
+  // Calculate extra sides/pints cost with automatic 2x 8 oz -> 1 Pint conversion on plates
+  // and +23.16% cobbler pint pricing on Family packages
+  function calculateExtraSides(plate, regSideTotal, dessertSideTotal) {
+    const maxSides = (plate && plate.maxSides) || 4;
+    const totalSides = regSideTotal + dessertSideTotal;
+    const extraTotal = Math.max(0, totalSides - maxSides);
+    if (extraTotal === 0 || !plate || !plate.extraSidePrice) {
+      return { extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
+    }
+
+    if (plate.familyMode) {
+      const extraReg = Math.max(0, regSideTotal - maxSides);
+      const includedLeftForDesserts = Math.max(0, maxSides - regSideTotal);
+      const extraDes = Math.max(0, dessertSideTotal - includedLeftForDesserts);
+      const regCost = +(extraReg * plate.extraSidePrice).toFixed(2);
+      const desPrice = plate.extraDessertPrice || DESSERT_16OZ_PRICE;
+      const desCost = +(extraDes * desPrice).toFixed(2);
+      const totalCost = +(regCost + desCost).toFixed(2);
+
+      const lines = [];
+      const warnParts = [];
+      if (extraReg > 0) {
+        lines.push({ label: `+${extraReg} Extra Side ${extraReg === 1 ? 'Pint' : 'Pints'}`, price: regCost, weigh: false });
+        warnParts.push(`${extraReg} Extra Side ${extraReg === 1 ? 'Pint' : 'Pints'} (+$${regCost.toFixed(2)})`);
+      }
+      if (extraDes > 0) {
+        lines.push({ label: `+${extraDes} Extra Cobbler ${extraDes === 1 ? 'Pint' : 'Pints'}`, price: desCost, weigh: false });
+        warnParts.push(`${extraDes} Extra Cobbler ${extraDes === 1 ? 'Pint' : 'Pints'} (+$${desCost.toFixed(2)})`);
+      }
+
+      return {
+        extraTotal,
+        extraCost: totalCost,
+        lines,
+        warningText: `WARNING: ${extraTotal} extra ${extraTotal === 1 ? 'pint' : 'pints'} over the ${maxSides} included (${warnParts.join(', ')}).`
+      };
+    }
+
+    const extraPints = Math.floor(extraTotal / 2);
+    const rem8oz = extraTotal % 2;
+    const pintPrice = plate.extraPintPrice || SIDE_16OZ_PRICE;
+    const pintCost = +(extraPints * pintPrice).toFixed(2);
+    const remCost = +(rem8oz * plate.extraSidePrice).toFixed(2);
+    const totalCost = +(pintCost + remCost).toFixed(2);
+
+    const lines = [];
+    const warnParts = [];
+    if (extraPints > 0) {
+      lines.push({ label: `+${extraPints} Extra ${extraPints === 1 ? 'Pint' : 'Pints'} (2x 8 oz)`, price: pintCost, weigh: false });
+      warnParts.push(`${extraPints} Extra ${extraPints === 1 ? 'Pint' : 'Pints'} (+$${pintCost.toFixed(2)})`);
+    }
+    if (rem8oz > 0) {
+      lines.push({ label: `+${rem8oz} Extra 8 oz Side`, price: remCost, weigh: false });
+      warnParts.push(`${rem8oz} Extra 8 oz Side (+$${remCost.toFixed(2)})`);
+    }
+
+    return {
+      extraTotal,
+      extraCost: totalCost,
+      lines,
+      warningText: `WARNING: ${extraTotal} extra ${extraTotal === 1 ? 'side' : 'sides'} over the ${maxSides} included — ${warnParts.join(' + ')}.`
+    };
+  }
+
+  function getIncludedDessertsForPlate(plate, regSideTotal) {
+    if (!plate || plate.familyMode || !plate.maxDesserts) return 0;
+    if (plate.fiveSidesNoFreeDessert && regSideTotal >= 5) return 0;
+    return plate.maxDesserts;
+  }
+
+  // On To-Go Dinner / To-Go Plate / Veg Plate: 1 dessert included (0 on Veg Plate if 5 sides chosen);
+  // extra Cinnamon Buns charge $2.50/ea, extra cobblers charge 8 oz ($6.47) & 2x = Pint ($10.16)
+  function calculateExtraPlateDesserts(plate, cinnaBunCount, cobblerCount, regSideTotal) {
+    if (!plate || plate.familyMode || !plate.maxDesserts) {
+      return { maxD: 0, extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
+    }
+    const maxD = getIncludedDessertsForPlate(plate, regSideTotal);
+    const totalD = cinnaBunCount + cobblerCount;
+    const extraTotal = Math.max(0, totalD - maxD);
+    if (extraTotal === 0) {
+      return { maxD, extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
+    }
+
+    // Use free dessert slot on cobbler first (higher value) if both are picked
+    const freeCobblers = Math.min(cobblerCount, maxD);
+    const remFree = maxD - freeCobblers;
+    const freeCinnaBuns = Math.min(cinnaBunCount, remFree);
+
+    const extraCobblers = cobblerCount - freeCobblers;
+    const extraCinnaBuns = cinnaBunCount - freeCinnaBuns;
+
+    const extraPints = Math.floor(extraCobblers / 2);
+    const rem8oz = extraCobblers % 2;
+    const d8Price = plate.extraDessert8Price || DESSERT_8OZ_PRICE;
+    const d16Price = plate.extraDessertPintPrice || DESSERT_16OZ_PRICE;
+
+    const cobblerPintCost = +(extraPints * d16Price).toFixed(2);
+    const cobbler8ozCost = +(rem8oz * d8Price).toFixed(2);
+    const bunCost = +(extraCinnaBuns * CINNA_BUN_PRICE).toFixed(2);
+    const totalCost = +(cobblerPintCost + cobbler8ozCost + bunCost).toFixed(2);
+
+    const lines = [];
+    const warnParts = [];
+    if (extraCinnaBuns > 0) {
+      lines.push({ label: `+${extraCinnaBuns} Extra Cinnamon ${extraCinnaBuns === 1 ? 'Bun' : 'Buns'}`, price: bunCost, weigh: false });
+      warnParts.push(`${extraCinnaBuns} Extra Cinnamon ${extraCinnaBuns === 1 ? 'Bun' : 'Buns'} (+$${bunCost.toFixed(2)})`);
+    }
+    if (extraPints > 0) {
+      lines.push({ label: `+${extraPints} Extra Cobbler ${extraPints === 1 ? 'Pint' : 'Pints'}`, price: cobblerPintCost, weigh: false });
+      warnParts.push(`${extraPints} Extra Cobbler ${extraPints === 1 ? 'Pint' : 'Pints'} (+$${cobblerPintCost.toFixed(2)})`);
+    }
+    if (rem8oz > 0) {
+      lines.push({ label: `+${rem8oz} Extra 8 oz Cobbler`, price: cobbler8ozCost, weigh: false });
+      warnParts.push(`${rem8oz} Extra 8 oz Cobbler (+$${cobbler8ozCost.toFixed(2)})`);
+    }
+
+    return {
+      maxD,
+      extraTotal,
+      extraCost: totalCost,
+      lines,
+      warningText: `WARNING: ${extraTotal} extra ${extraTotal === 1 ? 'dessert' : 'desserts'} over the ${maxD} included — ${warnParts.join(' + ')}.`
+    };
+  }
+
+  // Bread calculation: 2 included on plates (8 on Family Meal, 12 on Family Feast); extras charge $0.45/Roll & $0.55/Cornbread
+  function calculateExtraBread(plate, rollsCount, cornbreadCount) {
+    const maxB = (plate && plate.maxBread) || 2;
+    const totalBread = rollsCount + cornbreadCount;
+    const extraTotal = Math.max(0, totalBread - maxB);
+    if (extraTotal === 0) {
+      return { extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
+    }
+
+    const freeRolls = Math.min(rollsCount, maxB);
+    const remFree = maxB - freeRolls;
+    const freeCornbread = Math.min(cornbreadCount, remFree);
+
+    const extraRolls = rollsCount - freeRolls;
+    const extraCornbread = cornbreadCount - freeCornbread;
+    const rollCost = +(extraRolls * ROLL_PRICE).toFixed(2);
+    const cbCost = +(extraCornbread * CORNBREAD_PRICE).toFixed(2);
+    const extraCost = +(rollCost + cbCost).toFixed(2);
+
+    const lines = [];
+    const warnParts = [];
+    if (extraRolls > 0) {
+      lines.push({ label: `+${extraRolls} Extra ${extraRolls === 1 ? 'Roll' : 'Rolls'}`, price: rollCost, weigh: false });
+      warnParts.push(`${extraRolls} Extra ${extraRolls === 1 ? 'Roll' : 'Rolls'} (+$${rollCost.toFixed(2)})`);
+    }
+    if (extraCornbread > 0) {
+      lines.push({ label: `+${extraCornbread} Extra Cornbread`, price: cbCost, weigh: false });
+      warnParts.push(`${extraCornbread} Extra Cornbread (+$${cbCost.toFixed(2)})`);
+    }
+
+    return {
+      extraTotal,
+      extraCost,
+      lines,
+      warningText: `WARNING: ${extraTotal} extra bread over the ${maxB} included — ${warnParts.join(' & ')}.`
+    };
+  }
+
+  function getActiveSections(plate, regSideTotal = 0) {
+    if (!plate) return [];
+    const freeCondimentSection = {
+      title: `Condiments & Sauces (${FREE_CONDIMENT_LIMIT} Free — +$${EXTRA_CONDIMENT_PRICE.toFixed(2)}/ea after ${FREE_CONDIMENT_LIMIT})`,
+      isCondiment: true,
+      isSide: false,
+      items: freeCondiments
+    };
+    const extraMeatSection = {
+      title: "Add Extra Meat (Weighed in Back) or Dumplings (8 oz / 16 oz)",
+      isExtraMeat: true,
+      items: extraMeatOptions
+    };
+
+    if (plate.familyMode) {
+      return [
+        { title: `Choose Pint Sides (${plate.maxSides} Total Pints Included w/ Cobblers • +$${plate.extraSidePrice.toFixed(2)}/extra)`, isSide: true, isPint: true, isDessertSide: false, items: sideItems },
+        { title: `Choose Pint Cobblers (Counts Toward ${plate.maxSides} Included Pints • +$${plate.extraDessertPrice.toFixed(2)}/extra)`, isSide: true, isPint: true, isDessertSide: true, items: cobblerItems },
+        { title: `Add Cinnamon Buns ($${CINNA_BUN_PRICE.toFixed(2)} Each — Not a Pint • Tap # to Type Quantity)`, isBakeryAddon: true, items: ["Cinnamon Buns"] },
+        { title: `Choose Bread (${plate.maxBread} Included — +$${ROLL_PRICE.toFixed(2)}/extra Roll, +$${CORNBREAD_PRICE.toFixed(2)}/extra Cornbread)`, isBread: true, items: ["Yeast Rolls", "Cornbread"] },
+        freeCondimentSection,
+        extraMeatSection
+      ];
+    }
+
+    const maxS = plate.maxSides || 4;
+    const maxB = plate.maxBread || 2;
+    const maxD = getIncludedDessertsForPlate(plate, regSideTotal);
+    const extraNote = plate.extraSidePrice ? ` • +$${plate.extraSidePrice.toFixed(2)}/extra 8 oz (2× = $${SIDE_16OZ_PRICE.toFixed(2)} Pint)` : '';
+    const dessertExtraNote = maxD > 0
+      ? ` (${maxD} Included • +$${CINNA_BUN_PRICE.toFixed(2)}/extra Bun, +$${DESSERT_8OZ_PRICE.toFixed(2)}/extra 8 oz Cobbler)`
+      : ` (0 Included w/ 5 Sides • +$${CINNA_BUN_PRICE.toFixed(2)}/Bun, +$${DESSERT_8OZ_PRICE.toFixed(2)}/8 oz Cobbler)`;
+    const sections = [
+      { title: "Choose Meat (1/2 lb — Select 1)", isMeat: true, singleSelect: true, isSide: false, items: meatItems },
+      { title: `Choose Sides (${maxS} Included${extraNote})`, isSide: true, isDessertSide: false, items: sideItems },
+      { title: `Choose Bread (${maxB} Included — +$${ROLL_PRICE.toFixed(2)}/extra Roll, +$${CORNBREAD_PRICE.toFixed(2)}/extra Cornbread)`, isBread: true, isSide: false, items: ["Yeast Rolls", "Cornbread"] },
+      { title: `Choose Dessert${dessertExtraNote}`, isPlateDessert: true, isSide: false, items: plateDessertItems },
+      { title: "Choose Drink", isDrinkDropdown: true, isSide: false, items: drinkOptions },
+      freeCondimentSection,
+      extraMeatSection
+    ];
+    return sections.filter(sec => !(sec.isMeat && plate.noMeat));
+  }
+
+  function renderButtons(list, gridId, extraClass) {
+    const grid = document.getElementById(gridId);
+    list.forEach(item => {
+      const btn = document.createElement('button');
+      const cls = item.btnClass || extraClass;
+      btn.className = `menu-btn ${cls}`;
+      let priceLabel = item.unitPrice !== undefined ? `$${item.unitPrice.toFixed(2)}/ea` : `$${(item.price || 0).toFixed(2)}`;
+      if (item.weighInBack && item.rate) priceLabel = `$${item.rate.toFixed(2)}/lb • Weigh`;
+      else if (item.weighInBack) priceLabel = 'Weigh in back';
+      else if (item.unitPrice === undefined && item.price === 0) priceLabel = 'Enter Price';
+      btn.innerHTML = `${item.name}<span>${priceLabel}</span>`;
+      btn.onclick = () => {
+        if (item.build) {
+          openBuilder(item);
+        } else if (item.pickType) {
+          openSidePicker(item);
+        } else if (item.convertGroup) {
+          add8ozItemWithAutoConvert(item.convertGroup, item.itemTitle || item.name, item.price);
+        } else if (item.askQty && item.weighInBack) {
+          const input = prompt("How many pieces of chicken? (Weighed in back)", "2");
+          if (input === null) return;
+          const qty = parseInt(input, 10);
+          if (isNaN(qty) || qty <= 0) return alert("Please enter a valid number of pieces.");
+          cart.push({ name: `${qty} ${item.qtyLabel} (WEIGH)`, price: 0, weigh: true, mods: [] });
+          updateTicket();
+        } else if (item.askQty && item.unitPrice !== undefined) {
+          const labelPlural = item.pluralLabel || item.qtyLabel;
+          const input = prompt(`How many ${labelPlural}? ($${item.unitPrice.toFixed(2)} each)`, item.defaultQty || "2");
+          if (input === null) return;
+          const qty = parseInt(input, 10);
+          if (isNaN(qty) || qty <= 0) return alert("Please enter a valid quantity.");
+          const total = +(qty * item.unitPrice).toFixed(2);
+          const itemLabel = qty === 1 ? `1 ${item.qtyLabel}` : `${qty} ${labelPlural}`;
+          cart.push({ name: itemLabel, price: total, weigh: false, mods: [] });
+          updateTicket();
+        } else if (item.weighInBack && item.weightGroup && item.quarters) {
+          addWeightedMeatWithSum(item.weightGroup, item.quarters);
+        } else if (item.weighInBack) {
+          cart.push({ name: `${item.name} (WEIGH)`, price: 0, weigh: true, mods: [] });
+          updateTicket();
+        } else if (item.price === 0) {
+          const input = prompt(`Enter price for ${item.name}:`);
+          if (input === null) return;
+          const parsed = parseFloat(input);
+          if (isNaN(parsed) || parsed < 0) return alert("Please enter a valid price.");
+          cart.push({ name: item.name, price: parsed, mods: [] });
+          updateTicket();
+        } else {
+          cart.push({ name: item.name, price: item.price, mods: [] });
+          updateTicket();
+        }
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  initDailyReminder();
+  renderButtons(meals, 'mealGrid', '');
+  renderButtons(bulkMeats, 'bulkGrid', 'bulk');
+  renderButtons(sidesAndBakery, 'sideGrid', 'side');
+  populateALaCarteDrinks();
+
+  function openBuilder(item) {
+    pendingPlate = item;
+    builderCounts = {};
+    builderDrink = item.includes20oz ? "20 oz Bottled Drink" : "";
+    document.getElementById('modalTitle').innerText = `Build ${item.name} ($${item.price.toFixed(2)})`;
+    renderBuilderUI();
+    document.getElementById('plateModal').style.display = 'flex';
+  }
+
+  function selectSingleMeat(label) {
+    const wasSelected = builderCounts[label] === 1;
+    meatItems.forEach(m => delete builderCounts[m]);
+    if (!wasSelected) builderCounts[label] = 1;
+    renderBuilderUI();
+  }
+
+  function setBuilderDrink(val) {
+    builderDrink = val;
+    renderBuilderUI();
+  }
+
+  function setBreadPreset(rolls, cornbread) {
+    if (rolls > 0) builderCounts["Yeast Rolls"] = rolls;
+    else delete builderCounts["Yeast Rolls"];
+    if (cornbread > 0) builderCounts["Cornbread"] = cornbread;
+    else delete builderCounts["Cornbread"];
+    renderBuilderUI();
+  }
+
+  function promptBuilderQty(key, displayLabel) {
+    const current = builderCounts[key] || 1;
+    const input = prompt(`Enter quantity for ${displayLabel}:`, String(current));
+    if (input === null) return;
+    const qty = parseInt(input, 10);
+    if (isNaN(qty) || qty < 0) return alert("Please enter a valid number.");
+    if (qty === 0) delete builderCounts[key];
+    else builderCounts[key] = qty;
+    renderBuilderUI();
+  }
+
+  function getCurrentRegSideTotal() {
+    if (!pendingPlate || pendingPlate.familyMode) return 0;
+    return sideItems.reduce((sum, s) => sum + (builderCounts[s] || 0), 0);
+  }
+
+  function renderBuilderUI() {
+    const container = document.getElementById('builderContent');
+    container.innerHTML = '';
+    const regSidesSelected = getCurrentRegSideTotal();
+    const sections = getActiveSections(pendingPlate, regSidesSelected);
+    const todayIdx = new Date().getDay();
+    let selectedMeat = null;
+    let hasMeatSection = false;
+    let regSideTotal = 0;
+    let dessertSideTotal = 0;
+    let plateCinnaBunCount = 0;
+    let plateCobblerCount = 0;
+    let familyCinnaBunCount = 0;
+    let rollsCount = 0;
+    let cornbreadCount = 0;
+    let condimentTotal = 0;
+    let extraPricedAddonCost = 0;
+    let weighedAddonCount = 0;
+    const offDaySelections = [];
+
+    sections.forEach((sec, idx) => {
+      if (sec.isMeat) hasMeatSection = true;
+
+      const h = document.createElement('div');
+      h.className = `builder-cat ${sec.isCondiment ? 'condiment-cat' : ''}`;
+      h.innerText = `${idx + 1}. ${sec.title}`;
+      container.appendChild(h);
+
+      if (sec.isDrinkDropdown) {
+        const sel = document.createElement('select');
+        sel.className = 'builder-drink-select';
+        const noneOpt = document.createElement('option');
+        noneOpt.value = '';
+        noneOpt.innerText = 'No Drink';
+        sel.appendChild(noneOpt);
+
+        sec.items.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.name;
+          const upcharge = getDrinkMealUpcharge(d.name, pendingPlate);
+          opt.innerText = upcharge > 0 ? `${d.name} (+$${upcharge.toFixed(2)})` : d.name;
+          if (builderDrink === d.name) opt.selected = true;
+          sel.appendChild(opt);
+        });
+
+        sel.onchange = (e) => setBuilderDrink(e.target.value);
+        container.appendChild(sel);
+        return;
+      }
+
+      if (sec.isBread && pendingPlate.maxBread) {
+        const maxB = pendingPlate.maxBread;
+        const half = Math.floor(maxB / 2);
+        const presets = document.createElement('div');
+        presets.className = 'preset-row';
+        presets.innerHTML = `
+          <button type="button" class="preset-btn" onclick="setBreadPreset(${maxB}, 0)">All ${maxB} Rolls</button>
+          <button type="button" class="preset-btn" onclick="setBreadPreset(${half}, ${maxB - half})">${half} ${half === 1 ? 'Roll' : 'Rolls'} / ${maxB - half} Cornbread</button>
+          <button type="button" class="preset-btn" onclick="setBreadPreset(0, ${maxB})">All ${maxB} Cornbread</button>
+          <button type="button" class="preset-btn" onclick="setBreadPreset(0, 0)">Clear Bread</button>`;
+        container.appendChild(presets);
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'builder-grid';
+
+      sec.items.forEach(item => {
+        if (sec.singleSelect) {
+          const isSelected = builderCounts[item] === 1;
+          if (isSelected) {
+            selectedMeat = item;
+            const schedDay = getScheduledDayIndex(item, item);
+            if (schedDay !== null && schedDay !== todayIdx) {
+              offDaySelections.push(`${item} (${DAY_NAMES[schedDay]})`);
+            }
+          }
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `select-card ${isSelected ? 'active' : ''}`;
+          btn.innerHTML = `<span>${item}</span><span class="select-check">${isSelected ? '✓' : ''}</span>`;
+          btn.onclick = () => selectSingleMeat(item);
+          grid.appendChild(btn);
+          return;
+        }
+
+        const key = sec.isExtraMeat ? item.key : (sec.isCondiment ? `Cond:${item}` : item);
+        const displayLabel = sec.isExtraMeat ? item.label : item;
+        const count = builderCounts[key] || 0;
+        const isKeyboardQty = KEYBOARD_QTY_ITEMS.has(key);
+
+        if (count > 0) {
+          const schedDay = getScheduledDayIndex(displayLabel, key);
+          if (schedDay !== null && schedDay !== todayIdx) {
+            offDaySelections.push(`${displayLabel} (${DAY_NAMES[schedDay]})`);
+          }
+        }
+
+        if (sec.isSide) {
+          if (sec.isDessertSide) dessertSideTotal += count;
+          else regSideTotal += count;
+        }
+        if (sec.isPlateDessert) {
+          if (key === "Cinnamon Buns") plateCinnaBunCount += count;
+          else plateCobblerCount += count;
+        }
+        if (sec.isBakeryAddon && key === "Cinnamon Buns") {
+          familyCinnaBunCount += count;
+        }
+        if (sec.isBread) {
+          if (key === "Yeast Rolls") rollsCount += count;
+          else if (key === "Cornbread") cornbreadCount += count;
+        }
+        if (sec.isCondiment) condimentTotal += count;
+        if (sec.isExtraMeat && count > 0) {
+          if (item.weighInBack) weighedAddonCount += 1;
+          else extraPricedAddonCost = +(extraPricedAddonCost + count * item.price).toFixed(2);
+        }
+
+        let priceSubHtml = '';
+        if (sec.isExtraMeat) {
+          priceSubHtml = item.weighInBack
+            ? '<span class="price-sub">Weigh in back</span>'
+            : `<span class="price-sub">+$${item.price.toFixed(2)}</span>`;
+        } else if (sec.isCondiment) {
+          priceSubHtml = '<span class="price-sub">2 free, then $0.45/ea</span>';
+        } else if (isKeyboardQty) {
+          if (key === "Yeast Rolls") priceSubHtml = `<span class="price-sub">Tap # to type ($${ROLL_PRICE.toFixed(2)}/extra)</span>`;
+          else if (key === "Cornbread") priceSubHtml = `<span class="price-sub">Tap # to type ($${CORNBREAD_PRICE.toFixed(2)}/extra)</span>`;
+          else if (sec.isBakeryAddon) priceSubHtml = `<span class="price-sub">Tap # to type (+$${CINNA_BUN_PRICE.toFixed(2)}/ea)</span>`;
+          else priceSubHtml = `<span class="price-sub">Tap # to type ($${CINNA_BUN_PRICE.toFixed(2)}/extra)</span>`;
+        }
+
+        const escapedKey = escapeJsSingleQuote(key);
+        const escapedLabel = escapeJsSingleQuote(displayLabel);
+        const qtyDisplayHtml = isKeyboardQty
+          ? `<span class="qnum qnum-editable" title="Tap to type quantity" onclick="promptBuilderQty('${escapedKey}', '${escapedLabel}')">${count}</span>`
+          : `<span class="qnum">${count}</span>`;
+
+        const card = document.createElement('div');
+        card.className = `qty-card ${sec.isCondiment ? 'condiment-card ' : ''}${count > 0 ? 'active' : ''}`;
+        card.innerHTML = `
+          <span>${displayLabel}${priceSubHtml}</span>
+          <div class="qty-controls">
+            <button class="qbtn minus" onclick="changeQty('${escapedKey}', -1)">-</button>
+            ${qtyDisplayHtml}
+            <button class="qbtn plus" onclick="changeQty('${escapedKey}', 1)">+</button>
+          </div>`;
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    });
+
+    const dayWarnEl = document.getElementById('dayWarning');
+    if (offDaySelections.length > 0) {
+      dayWarnEl.innerText = `OFF-DAY REMINDER (Today is ${DAY_NAMES[todayIdx]}): ${offDaySelections.join(', ')} — confirm this is running as a special today.`;
+      dayWarnEl.style.display = 'block';
+    } else {
+      dayWarnEl.style.display = 'none';
+      dayWarnEl.innerText = '';
+    }
+
+    const counterGroup = document.getElementById('counterGroup');
+    counterGroup.innerHTML = '';
+
+    if (hasMeatSection) {
+      const meatStatusPill = document.createElement('span');
+      meatStatusPill.className = `counter-pill ${selectedMeat ? 'selected-meat' : ''}`;
+      meatStatusPill.innerText = selectedMeat ? `Meat: ${selectedMeat}` : 'Meat: None (Select 1)';
+      counterGroup.appendChild(meatStatusPill);
+    }
+
+    const sideTotal = regSideTotal + dessertSideTotal;
+    const maxSides = (pendingPlate && pendingPlate.maxSides) || 4;
+    const sideLabel = (pendingPlate && pendingPlate.sideLabel) || 'Sides';
+    const extraCalc = calculateExtraSides(pendingPlate, regSideTotal, dessertSideTotal);
+
+    const sidePill = document.createElement('span');
+    sidePill.className = `counter-pill ${extraCalc.extraTotal > 0 ? 'over-limit' : ''}`;
+    if (extraCalc.extraCost > 0) {
+      sidePill.innerText = `${sideLabel}: ${sideTotal} / ${maxSides} (+${extraCalc.extraTotal} extra: +$${extraCalc.extraCost.toFixed(2)})`;
+    } else {
+      sidePill.innerText = `${sideLabel}: ${sideTotal} / ${maxSides}${extraCalc.extraTotal > 0 ? ' (Over limit)' : ''}`;
+    }
+    counterGroup.appendChild(sidePill);
+
+    const extraBreadCalc = calculateExtraBread(pendingPlate, rollsCount, cornbreadCount);
+    if (pendingPlate && pendingPlate.maxBread) {
+      const maxBread = pendingPlate.maxBread;
+      const breadTotal = rollsCount + cornbreadCount;
+      const breadPill = document.createElement('span');
+      breadPill.className = `counter-pill ${extraBreadCalc.extraTotal > 0 ? 'over-limit' : 'bread-pill'}`;
+      breadPill.innerText = extraBreadCalc.extraCost > 0
+        ? `Bread: ${breadTotal} / ${maxBread} (+${extraBreadCalc.extraTotal} extra: +$${extraBreadCalc.extraCost.toFixed(2)})`
+        : `Bread: ${breadTotal} / ${maxBread}`;
+      counterGroup.appendChild(breadPill);
+    }
+
+    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaBunCount, plateCobblerCount, regSideTotal);
+    if (pendingPlate && pendingPlate.maxDesserts && !pendingPlate.familyMode) {
+      const maxD = extraDessertCalc.maxD;
+      const plateDessertTotal = plateCinnaBunCount + plateCobblerCount;
+      const dessertPill = document.createElement('span');
+      dessertPill.className = `counter-pill ${extraDessertCalc.extraTotal > 0 ? 'over-limit' : 'dessert-pill'}`;
+      dessertPill.innerText = extraDessertCalc.extraCost > 0
+        ? `Dessert: ${plateDessertTotal} / ${maxD} (+${extraDessertCalc.extraTotal} extra: +$${extraDessertCalc.extraCost.toFixed(2)})`
+        : `Dessert: ${plateDessertTotal} / ${maxD}`;
+      counterGroup.appendChild(dessertPill);
+    }
+
+    const familyCinnaBunCost = +(familyCinnaBunCount * CINNA_BUN_PRICE).toFixed(2);
+    if (familyCinnaBunCount > 0) {
+      const bunPill = document.createElement('span');
+      bunPill.className = 'counter-pill dessert-pill';
+      bunPill.innerText = `Cinnamon Buns: ${familyCinnaBunCount} (+$${familyCinnaBunCost.toFixed(2)})`;
+      counterGroup.appendChild(bunPill);
+    }
+
+    const extraCondimentCount = Math.max(0, condimentTotal - FREE_CONDIMENT_LIMIT);
+    const extraCondimentCost = +(extraCondimentCount * EXTRA_CONDIMENT_PRICE).toFixed(2);
+    if (condimentTotal > 0) {
+      const condPill = document.createElement('span');
+      condPill.className = `counter-pill ${extraCondimentCount > 0 ? 'over-limit' : 'condiment-pill'}`;
+      condPill.innerText = extraCondimentCount > 0
+        ? `Condiments: ${condimentTotal} / ${FREE_CONDIMENT_LIMIT} Free (+${extraCondimentCount}: +$${extraCondimentCost.toFixed(2)})`
+        : `Condiments: ${condimentTotal} / ${FREE_CONDIMENT_LIMIT} Free`;
+      counterGroup.appendChild(condPill);
+    }
+
+    const drinkUpcharge = getDrinkMealUpcharge(builderDrink, pendingPlate);
+    if (drinkUpcharge > 0) {
+      const drinkPill = document.createElement('span');
+      drinkPill.className = 'counter-pill drink-pill';
+      drinkPill.innerText = `20 oz Drink: +$${drinkUpcharge.toFixed(2)}`;
+      counterGroup.appendChild(drinkPill);
+    }
+
+    if (weighedAddonCount > 0) {
+      const weighPill = document.createElement('span');
+      weighPill.className = 'counter-pill meat-pill';
+      weighPill.innerText = '+ Weighed Meat';
+      counterGroup.appendChild(weighPill);
+    }
+
+    if (extraPricedAddonCost > 0) {
+      const addonPill = document.createElement('span');
+      addonPill.className = 'counter-pill meat-pill';
+      addonPill.innerText = `Dumplings: +$${extraPricedAddonCost.toFixed(2)}`;
+      counterGroup.appendChild(addonPill);
+    }
+
+    const warningMessages = [];
+    if (extraCalc.extraCost > 0) warningMessages.push(extraCalc.warningText);
+    if (extraBreadCalc.extraCost > 0) warningMessages.push(extraBreadCalc.warningText);
+    if (extraDessertCalc.extraCost > 0) warningMessages.push(extraDessertCalc.warningText);
+    if (extraCondimentCost > 0) {
+      warningMessages.push(`WARNING: ${extraCondimentCount} extra ${extraCondimentCount === 1 ? 'condiment' : 'condiments'} over the ${FREE_CONDIMENT_LIMIT} free = +$${extraCondimentCost.toFixed(2)} ($${EXTRA_CONDIMENT_PRICE.toFixed(2)} each).`);
+    }
+
+    const warningEl = document.getElementById('extraWarning');
+    if (warningMessages.length > 0) {
+      warningEl.innerText = warningMessages.join(' | ');
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+      warningEl.innerText = '';
+    }
+
+    const totalBtnPrice = pendingPlate
+      ? +(pendingPlate.price + extraCalc.extraCost + extraBreadCalc.extraCost + extraDessertCalc.extraCost + familyCinnaBunCost + extraCondimentCost + extraPricedAddonCost + drinkUpcharge).toFixed(2)
+      : 0;
+    const weighSuffix = weighedAddonCount > 0 ? ' + Weigh' : '';
+    document.getElementById('confirmPlateBtn').innerText = `Add to Ticket ($${totalBtnPrice.toFixed(2)}${weighSuffix})`;
+  }
+
+  function changeQty(key, delta) {
+    const next = (builderCounts[key] || 0) + delta;
+    if (next <= 0) delete builderCounts[key];
+    else builderCounts[key] = next;
+    renderBuilderUI();
+  }
+
+  function closeBuilder() {
+    document.getElementById('plateModal').style.display = 'none';
+    pendingPlate = null;
+    builderDrink = "";
+  }
+
+  function confirmPlate() {
+    if (!pendingPlate) return;
+    const mods = [];
+    let regSideTotal = 0;
+    let dessertSideTotal = 0;
+    let plateCinnaBunCount = 0;
+    let plateCobblerCount = 0;
+    let rollsCount = 0;
+    let cornbreadCount = 0;
+    let condimentTotal = 0;
+    let drinkUpcharge = 0;
+    const extraPriceLines = [];
+
+    const regSidesForRules = getCurrentRegSideTotal();
+    getActiveSections(pendingPlate, regSidesForRules).forEach(sec => {
+      if (sec.isDrinkDropdown) {
+        if (builderDrink) {
+          drinkUpcharge = getDrinkMealUpcharge(builderDrink, pendingPlate);
+          const labelText = drinkUpcharge > 0
+            ? `${builderDrink} (+$${drinkUpcharge.toFixed(2)})`
+            : builderDrink;
+          mods.push({ label: labelText, price: drinkUpcharge, weigh: false });
+        }
+        return;
+      }
+
+      sec.items.forEach(item => {
+        if (sec.isExtraMeat) {
+          const count = builderCounts[item.key] || 0;
+          if (count > 0) {
+            if (item.weighInBack) {
+              if (item.weightGroup && item.quarters) {
+                const totalQ = item.quarters * count;
+                mods.push({
+                  label: formatQuartersToWeight(totalQ, item.weightGroup, true),
+                  price: 0,
+                  weigh: true,
+                  weightGroup: item.weightGroup,
+                  quarters: totalQ
+                });
+              } else {
+                const labelText = item.perPiece
+                  ? `+${count} ${item.ticketLabel} (WEIGH)`
+                  : (count > 1 ? `+${count}x ${item.ticketLabel} (WEIGH)` : `+${item.ticketLabel} (WEIGH)`);
+                mods.push({ label: labelText, price: 0, weigh: true });
+              }
+            } else {
+              if (item.convertGroup === 'dumpling8' && count >= 2) {
+                const pints = Math.floor(count / 2);
+                const rem = count % 2;
+                const lineCost = +(pints * SIDE_16OZ_PRICE + rem * SIDE_8OZ_PRICE).toFixed(2);
+                const parts = [];
+                if (pints > 0) parts.push(`${pints}x 16 oz Dumplings`);
+                if (rem > 0) parts.push(`${rem}x 8 oz Dumplings`);
+                extraPriceLines.push({ label: `+${parts.join(' + ')}`, price: lineCost, weigh: false });
+              } else {
+                const lineCost = +(count * item.price).toFixed(2);
+                const labelText = count > 1
+                  ? `+${count}x ${item.ticketLabel}`
+                  : `+${item.ticketLabel}`;
+                extraPriceLines.push({ label: labelText, price: lineCost, weigh: false });
+              }
+            }
+          }
+        } else if (sec.isCondiment) {
+          const count = builderCounts[`Cond:${item}`] || 0;
+          if (count > 0) {
+            condimentTotal += count;
+            const labelText = count > 1 ? `${count}x ${item}` : item;
+            mods.push({
+              label: labelText,
+              condimentName: item,
+              isCondiment: true,
+              condimentCount: count,
+              price: 0,
+              weigh: false
+            });
+          }
+        } else if (sec.isBakeryAddon) {
+          const count = builderCounts[item] || 0;
+          if (count > 0) {
+            const lineCost = +(count * CINNA_BUN_PRICE).toFixed(2);
+            const labelText = count > 1
+              ? `+${count}x ${item}`
+              : `+1 Cinnamon Bun`;
+            extraPriceLines.push({ label: labelText, price: lineCost, weigh: false });
+          }
+        } else {
+          const count = builderCounts[item] || 0;
+          if (count > 0) {
+            if (sec.isSide) {
+              if (sec.isDessertSide) dessertSideTotal += count;
+              else regSideTotal += count;
+            }
+            if (sec.isPlateDessert) {
+              if (item === "Cinnamon Buns") plateCinnaBunCount += count;
+              else plateCobblerCount += count;
+            }
+            if (sec.isBread) {
+              if (item === "Yeast Rolls") rollsCount += count;
+              else if (item === "Cornbread") cornbreadCount += count;
+            }
+            const suffix = sec.isPint ? ' (Pint)' : '';
+            const labelText = count > 1 ? `${count}x ${item}${suffix}` : `${item}${suffix}`;
+            mods.push({ label: labelText, price: 0, weigh: false });
+          }
+        }
+      });
+    });
+
+    const extraCalc = calculateExtraSides(pendingPlate, regSideTotal, dessertSideTotal);
+    extraCalc.lines.forEach(l => extraPriceLines.push(l));
+
+    const extraBreadCalc = calculateExtraBread(pendingPlate, rollsCount, cornbreadCount);
+    extraBreadCalc.lines.forEach(l => extraPriceLines.push(l));
+
+    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaBunCount, plateCobblerCount, regSideTotal);
+    extraDessertCalc.lines.forEach(l => extraPriceLines.push(l));
+
+    const extraCondimentCount = Math.max(0, condimentTotal - FREE_CONDIMENT_LIMIT);
+    const extraCondimentCost = +(extraCondimentCount * EXTRA_CONDIMENT_PRICE).toFixed(2);
+    if (extraCondimentCost > 0) {
+      extraPriceLines.push({
+        label: `+${extraCondimentCount} Extra ${extraCondimentCount === 1 ? 'Condiment' : 'Condiments'}`,
+        isCondimentChargeLine: true,
+        price: extraCondimentCost,
+        weigh: false
+      });
+    }
+
+    // Keep main meal at its stock price; append itemized extras below so the ticket adds them up clearly
+    cart.push({
+      name: pendingPlate.name,
+      price: pendingPlate.price,
+      weigh: false,
+      mods
+    });
+
+    extraPriceLines.forEach(exLine => {
+      cart.push({
+        name: exLine.label,
+        price: exLine.price,
+        isCondimentChargeLine: !!exLine.isCondimentChargeLine,
+        weigh: false,
+        mods: []
+      });
+    });
+
+    closeBuilder();
+    updateTicket();
+  }
+
+  function removeItem(cartIdx) {
+    cart.splice(cartIdx, 1);
+    updateTicket();
+  }
+
+  function removeMod(cartIdx, modIdx) {
+    const removed = cart[cartIdx].mods.splice(modIdx, 1)[0];
+    if (removed && removed.price) {
+      cart[cartIdx].price = Math.max(0, +(cart[cartIdx].price - removed.price).toFixed(2));
+    }
+    updateTicket();
+  }
+
+  function cleanWeighedLabel(raw) {
+    return raw.replace(/^\+\s*/, '').replace(/\s*\(WEIGH\)\s*$/i, '').trim();
+  }
+
+  function updateTicket() {
+    document.getElementById('tTime').innerText = new Date().toLocaleString();
+    const name = document.getElementById('custName').value;
+    const phone = document.getElementById('custPhone').value;
+    document.getElementById('tCust').innerText = name ? `Customer: ${name}` : 'Customer: Walk-In';
+    document.getElementById('tPhone').innerText = phone ? `Phone: ${phone}` : '';
+
+    const itemsDiv = document.getElementById('tItems');
+    itemsDiv.innerHTML = '';
+    let sub = 0;
+    const weighedLines = [];
+
+    cart.forEach((item, i) => {
+      sub += item.price;
+      if (item.weigh) {
+        weighedLines.push(cleanWeighedLabel(item.name));
+      }
+
+      const modsHtml = item.mods.map((m, mIdx) => {
+        const text = typeof m === 'string' ? m : m.label;
+        const mPrice = typeof m === 'object' && m.price ? m.price : 0;
+        const isWeigh = typeof m === 'object' && m.weigh;
+        if (isWeigh) {
+          weighedLines.push(cleanWeighedLabel(text));
+        }
+        const rightCol = mPrice > 0 ? `<span>+$${mPrice.toFixed(2)}</span>` : '';
+        return `<div class="mod-line"><span><span class="remove-x" onclick="removeMod(${i}, ${mIdx})">[x]</span>- ${text}</span>${rightCol}</div>`;
+      }).join('');
+
+      const itemPriceDisplay = item.weigh ? '' : `$${item.price.toFixed(2)}`;
+      itemsDiv.innerHTML += `<div class="item-block"><div class="item-row"><span><span class="remove-x" onclick="removeItem(${i})">[x]</span>${item.name}</span><span>${itemPriceDisplay}</span></div>${modsHtml}</div>`;
+    });
+
+    const notes = document.getElementById('orderNotes').value.trim();
+    const notesDiv = document.getElementById('tNotes');
+    const noteRule = document.getElementById('noteDiv');
+    if (notes) {
+      notesDiv.innerText = `NOTES:\n${notes}`;
+      noteRule.style.display = 'block';
+    } else {
+      notesDiv.innerText = '';
+      noteRule.style.display = 'none';
+    }
+
+    const hasWeighed = weighedLines.length > 0;
+    document.getElementById('weighBanner').style.display = hasWeighed ? 'block' : 'none';
+
+    const breakdownEl = document.getElementById('weighBreakdown');
+    if (hasWeighed) {
+      breakdownEl.innerHTML = weighedLines
+        .map(wLabel => `<div class="weigh-item-line"><span>${wLabel}:</span><span>$__________</span></div>`)
+        .join('');
+    } else {
+      breakdownEl.innerHTML = '';
+    }
+
+    const tax = sub * 0.0925;
+    const total = sub + tax;
+    if (hasWeighed) {
+      document.getElementById('tSubLabel').innerText = 'Subtotal + Weighed Items:';
+      document.getElementById('tSub').innerText = '';
+      document.getElementById('tTax').innerText = '$__________';
+      document.getElementById('tTotal').innerText = '$__________';
+    } else {
+      document.getElementById('tSubLabel').innerText = 'Subtotal:';
+      document.getElementById('tSub').innerText = `$${sub.toFixed(2)}`;
+      document.getElementById('tTax').innerText = `$${tax.toFixed(2)}`;
+      document.getElementById('tTotal').innerText = `$${total.toFixed(2)}`;
+    }
+  }
+
+  function clearOrder() {
+    cart = [];
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('orderNotes').value = '';
+    updateTicket();
+  }
+
+  function printTicket() {
+    updateTicket();
+    window.print();
+  }
+
+  // Sends receipt HTML directly to the Star PassPRNT app on iOS/Android
+  function printToStar() {
+    updateTicket();
+    const receiptClone = document.getElementById('receipt').cloneNode(true);
+    receiptClone.querySelectorAll('.remove-x').forEach(el => el.remove());
+
+    const starHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * {
+    color: #000 !important;
+    -webkit-text-stroke: 0.4px #000;
+  }
+  body {
+    margin: 0;
+    padding: 18px 10px 60px 10px;
+    width: 560px;
+    font-family: 'Arial Black', 'Roboto', Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.45;
+    color: #000;
+    background: #fff;
+  }
+  div, span {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    line-height: 1.45 !important;
+  }
+  .center { text-align: center; }
+  .bold { font-weight: 900 !important; }
+  .divider {
+    border-top: 3px dashed #000 !important;
+    margin: 16px 0 !important;
+  }
+  .item-block {
+    margin-bottom: 16px !important;
+  }
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 900 !important;
+    margin-bottom: 4px;
+  }
+  .mod-line {
+    padding-left: 22px;
+    font-size: 25px !important;
+    font-weight: 700 !important;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .weigh-banner {
+    text-align: center;
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    border: 3px solid #000 !important;
+    padding: 8px !important;
+    margin-bottom: 14px !important;
+  }
+  .weigh-item-line {
+    justify-content: space-between;
+    font-weight: 900 !important;
+    margin-bottom: 6px !important;
+  }
+  svg {
+    width: 190px;
+    height: 120px;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+  ${receiptClone.innerHTML}
+  <div style="height: 80px;">&nbsp;</div>
+</body>
+</html>`;
+
+    const backUrl = (window.location.href && window.location.href !== 'about:blank')
+      ? window.location.href
+      : 'https://beasrestaurant.com';
+
+    const uri = 'starpassprnt://v1/print/nopreview'
+      + '?back=' + encodeURIComponent(backUrl)
+      + '&size=576'
+      + '&cut=partial'
+      + '&html=' + encodeURIComponent(starHtml);
+
+    window.location.href = uri;
+  }
+
+  updateTicket();
+</script>
+</body>
+</html>
