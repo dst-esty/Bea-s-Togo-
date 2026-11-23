@@ -702,6 +702,16 @@
     return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   }
 
+  // Formats plate/dinner 8 oz sides so 2 of the same side explicitly prints as "1 Pint <Side> (2x 8 oz)"
+  function formatPlate8ozSideLabel(sideName, count) {
+    if (count === 1) return `8 oz ${sideName}`;
+    if (count === 2) return `1 Pint ${sideName} (2x 8 oz)`;
+    const pints = Math.floor(count / 2);
+    const rem = count % 2;
+    const pintPart = pints === 1 ? `1 Pint ${sideName}` : `${pints} Pints ${sideName}`;
+    return rem > 0 ? `${pintPart} + 8 oz ${sideName}` : pintPart;
+  }
+
   // Converts quarter-pound increments (1 = 1/4 lb, 2 = 1/2 lb, 3 = 3/4 lb, 4 = 1 lb, 6 = 1 1/2 lb) into readable lb text
   function formatQuartersToWeight(quarters, meatGroup, isMod) {
     const whole = Math.floor(quarters / 4);
@@ -1055,7 +1065,7 @@
       : ` (0 Included w/ 5 Sides • +$${CINNA_BUN_PRICE.toFixed(2)}/Bun, +$${DESSERT_8OZ_PRICE.toFixed(2)}/8 oz Cobbler)`;
     const sections = [
       { title: "Choose Meat (1/2 lb — Select 1)", isMeat: true, singleSelect: true, isSide: false, items: meatItems },
-      { title: `Choose Sides (${maxS} Included${extraNote})`, isSide: true, isDessertSide: false, items: sideItems },
+      { title: `Choose 8 oz Sides (${maxS} Included — 2 of Same Side = 1 Pint${extraNote})`, isSide: true, isDessertSide: false, items: sideItems },
       { title: `Choose Bread (${maxB} Included — +$${ROLL_PRICE.toFixed(2)}/extra Roll, +$${CORNBREAD_PRICE.toFixed(2)}/extra Cornbread)`, isBread: true, isSide: false, items: ["Yeast Rolls", "Cornbread"] },
       { title: `Choose Dessert${dessertExtraNote}`, isPlateDessert: true, isSide: false, items: plateDessertItems },
       { title: "Choose Drink", isDrinkDropdown: true, isSide: false, items: drinkOptions },
@@ -1297,6 +1307,8 @@
             : `<span class="price-sub">+$${item.price.toFixed(2)}</span>`;
         } else if (sec.isCondiment) {
           priceSubHtml = '<span class="price-sub">2 free, then $0.45/ea</span>';
+        } else if (sec.isSide && !sec.isPint && count >= 2) {
+          priceSubHtml = `<span class="price-sub" style="color:#1e4d2b; font-weight:bold;">→ ${formatPlate8ozSideLabel(displayLabel, count)}</span>`;
         } else if (isKeyboardQty) {
           if (key === "Yeast Rolls") priceSubHtml = `<span class="price-sub">Tap # to type ($${ROLL_PRICE.toFixed(2)}/extra)</span>`;
           else if (key === "Cornbread") priceSubHtml = `<span class="price-sub">Tap # to type ($${CORNBREAD_PRICE.toFixed(2)}/extra)</span>`;
@@ -1561,9 +1573,13 @@
               if (item === "Yeast Rolls") rollsCount += count;
               else if (item === "Cornbread") cornbreadCount += count;
             }
-            const suffix = sec.isPint ? ' (Pint)' : '';
-            const labelText = count > 1 ? `${count}x ${item}${suffix}` : `${item}${suffix}`;
-            mods.push({ label: labelText, price: 0, weigh: false });
+            if (sec.isSide && !sec.isPint) {
+              mods.push({ label: formatPlate8ozSideLabel(item, count), price: 0, weigh: false });
+            } else {
+              const suffix = sec.isPint ? ' (Pint)' : '';
+              const labelText = count > 1 ? `${count}x ${item}${suffix}` : `${item}${suffix}`;
+              mods.push({ label: labelText, price: 0, weigh: false });
+            }
           }
         }
       });
@@ -1687,8 +1703,8 @@
     const tax = sub * 0.0925;
     const total = sub + tax;
     if (hasWeighed) {
-      document.getElementById('tSubLabel').innerText = 'Subtotal + Weighed Items:';
-      document.getElementById('tSub').innerText = '';
+      document.getElementById('tSubLabel').innerText = sub > 0 ? `Subtotal ($${sub.toFixed(2)} + Weighed):` : 'Subtotal:';
+      document.getElementById('tSub').innerText = '$__________';
       document.getElementById('tTax').innerText = '$__________';
       document.getElementById('tTotal').innerText = '$__________';
     } else {
