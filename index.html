@@ -566,7 +566,7 @@
     return null;
   }
 
-  // Side, Dessert, Bread & Cinnamon Bun pricing constants
+  // Side, Dessert, Bread & Cinnamon Roll pricing constants
   const SIDE_8OZ_PRICE = 5.25;
   const SIDE_16OZ_PRICE = 8.25;
   const DESSERT_MARKUP = 22.55 / 18.31;
@@ -574,7 +574,7 @@
   const DESSERT_16OZ_PRICE = +(SIDE_16OZ_PRICE * DESSERT_MARKUP).toFixed(2); // $10.16
   const ROLL_PRICE = 0.45;
   const CORNBREAD_PRICE = 0.55;
-  const CINNA_BUN_PRICE = 2.50;
+  const CINNA_ROLL_PRICE = 2.50;
 
   // Condiments & sauces: first 2 are free, then $0.45 each
   const FREE_CONDIMENT_LIMIT = 2;
@@ -616,8 +616,8 @@
   ];
 
   const meals = [
-    { name: "To-Go Dinner (Fountain/Tea)", price: 16.25, build: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
-    { name: "To-Go Plate (20oz Drink)", price: 18.00, build: true, includes20oz: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
+    { name: "To-Go Dinner (Fountain/Tea)", price: 16.25, build: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fullSidesNoFreeCobbler: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
+    { name: "To-Go Plate (20oz Drink)", price: 18.00, build: true, includes20oz: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fullSidesNoFreeCobbler: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
     { name: "Veg Plate", price: 13.25, build: true, noMeat: true, maxSides: 5, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fiveSidesNoFreeDessert: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
     { name: "Family Meal (8pc Chicken)", price: 57.25, build: true, familyMode: true, maxSides: 3, sideLabel: "Pints", extraSidePrice: SIDE_16OZ_PRICE, extraDessertPrice: DESSERT_16OZ_PRICE, extraUnit: "Pint", maxBread: 8 },
     { name: "Family Feast (12pc Chicken)", price: 77.50, build: true, familyMode: true, maxSides: 4, sideLabel: "Pints", extraSidePrice: SIDE_16OZ_PRICE, extraDessertPrice: DESSERT_16OZ_PRICE, extraUnit: "Pint", maxBread: 12 }
@@ -651,7 +651,7 @@
   const sidesAndBakery = [
     { name: "Yeast Rolls (# Pcs)", unitPrice: ROLL_PRICE, askQty: true, qtyLabel: "Yeast Roll", pluralLabel: "Yeast Rolls", defaultQty: "2" },
     { name: "Cornbread (# Pcs)", unitPrice: CORNBREAD_PRICE, askQty: true, qtyLabel: "Cornbread", pluralLabel: "Cornbread", defaultQty: "2" },
-    { name: "Dusty's Cinna Buns (# Pcs)", unitPrice: CINNA_BUN_PRICE, askQty: true, qtyLabel: "Dusty's Cinna Bun", pluralLabel: "Dusty's Cinna Buns", defaultQty: "2", btnClass: "dessert" },
+    { name: "Cinnamon Rolls (# Pcs)", unitPrice: CINNA_ROLL_PRICE, askQty: true, qtyLabel: "Cinnamon Roll", pluralLabel: "Cinnamon Rolls", defaultQty: "2", btnClass: "dessert" },
     { name: "8 oz Side", price: SIDE_8OZ_PRICE, pickType: "side", sizeLabel: "8 oz", convertGroup: "side8" },
     { name: "16 oz Side (Pint)", price: SIDE_16OZ_PRICE, pickType: "side", sizeLabel: "16 oz", suffix: " (Pint)" },
     { name: "8 oz Dessert", price: DESSERT_8OZ_PRICE, pickType: "cobbler", sizeLabel: "8 oz", convertGroup: "dessert8", btnClass: "dessert" },
@@ -687,10 +687,10 @@
   ];
 
   const plateDessertItems = [
-    "Cinnamon Buns", ...cobblerItems
+    "Cinnamon Rolls", ...cobblerItems
   ];
 
-  const KEYBOARD_QTY_ITEMS = new Set(["Yeast Rolls", "Cornbread", "Cinnamon Buns"]);
+  const KEYBOARD_QTY_ITEMS = new Set(["Yeast Rolls", "Cornbread", "Cinnamon Rolls"]);
 
   let cart = [];
   let pendingPlate = null;
@@ -938,26 +938,35 @@
     return plate.maxDesserts;
   }
 
-  // On To-Go Dinner / To-Go Plate / Veg Plate: 1 dessert included (0 on Veg Plate if 5 sides chosen);
-  // extra Cinnamon Buns charge $2.50/ea, extra cobblers charge 8 oz ($6.47) & 2x = Pint ($10.16)
-  function calculateExtraPlateDesserts(plate, cinnaBunCount, cobblerCount, regSideTotal) {
+  function getIncludedCobblersForPlate(plate, regSideTotal) {
+    if (!plate || plate.familyMode || !plate.maxDesserts) return 0;
+    if (plate.fiveSidesNoFreeDessert && regSideTotal >= 5) return 0;
+    if (plate.fullSidesNoFreeCobbler && regSideTotal >= (plate.maxSides || 4)) return 0;
+    return plate.maxDesserts;
+  }
+
+  // On To-Go Dinner / To-Go Plate: if 4 sides (8 oz equivs) are chosen, cobbler is NOT included;
+  // extra Cinnamon Rolls charge $2.50/ea, extra cobblers charge 8 oz ($6.47) & 2x = Pint ($10.16)
+  function calculateExtraPlateDesserts(plate, cinnaRollCount, cobblerCount, regSideTotal) {
     if (!plate || plate.familyMode || !plate.maxDesserts) {
       return { maxD: 0, extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
     }
-    const maxD = getIncludedDessertsForPlate(plate, regSideTotal);
-    const totalD = cinnaBunCount + cobblerCount;
-    const extraTotal = Math.max(0, totalD - maxD);
-    if (extraTotal === 0) {
-      return { maxD, extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
-    }
+    const maxDessertSlots = getIncludedDessertsForPlate(plate, regSideTotal);
+    const maxCobblerSlots = getIncludedCobblersForPlate(plate, regSideTotal);
 
-    // Use free dessert slot on cobbler first (higher value) if both are picked
-    const freeCobblers = Math.min(cobblerCount, maxD);
-    const remFree = maxD - freeCobblers;
-    const freeCinnaBuns = Math.min(cinnaBunCount, remFree);
-
+    const freeCobblers = Math.min(cobblerCount, maxCobblerSlots);
     const extraCobblers = cobblerCount - freeCobblers;
-    const extraCinnaBuns = cinnaBunCount - freeCinnaBuns;
+
+    const remainingDessertSlotsAfterCobbler = Math.max(0, maxDessertSlots - freeCobblers);
+    const freeCinnaRolls = Math.min(cinnaRollCount, remainingDessertSlotsAfterCobbler);
+    const extraCinnaRolls = cinnaRollCount - freeCinnaRolls;
+
+    const extraTotal = extraCobblers + extraCinnaRolls;
+    const effectiveMaxD = (freeCobblers + freeCinnaRolls) + extraTotal;
+
+    if (extraTotal === 0) {
+      return { maxD: Math.max(1, freeCobblers + freeCinnaRolls), extraTotal: 0, extraCost: 0, lines: [], warningText: '' };
+    }
 
     const extraPints = Math.floor(extraCobblers / 2);
     const rem8oz = extraCobblers % 2;
@@ -966,14 +975,14 @@
 
     const cobblerPintCost = +(extraPints * d16Price).toFixed(2);
     const cobbler8ozCost = +(rem8oz * d8Price).toFixed(2);
-    const bunCost = +(extraCinnaBuns * CINNA_BUN_PRICE).toFixed(2);
-    const totalCost = +(cobblerPintCost + cobbler8ozCost + bunCost).toFixed(2);
+    const rollCost = +(extraCinnaRolls * CINNA_ROLL_PRICE).toFixed(2);
+    const totalCost = +(cobblerPintCost + cobbler8ozCost + rollCost).toFixed(2);
 
     const lines = [];
     const warnParts = [];
-    if (extraCinnaBuns > 0) {
-      lines.push({ label: `+${extraCinnaBuns} Extra Cinnamon ${extraCinnaBuns === 1 ? 'Bun' : 'Buns'}`, price: bunCost, weigh: false });
-      warnParts.push(`${extraCinnaBuns} Extra Cinnamon ${extraCinnaBuns === 1 ? 'Bun' : 'Buns'} (+$${bunCost.toFixed(2)})`);
+    if (extraCinnaRolls > 0) {
+      lines.push({ label: `+${extraCinnaRolls} Extra Cinnamon ${extraCinnaRolls === 1 ? 'Roll' : 'Rolls'}`, price: rollCost, weigh: false });
+      warnParts.push(`${extraCinnaRolls} Extra Cinnamon ${extraCinnaRolls === 1 ? 'Roll' : 'Rolls'} (+$${rollCost.toFixed(2)})`);
     }
     if (extraPints > 0) {
       lines.push({ label: `+${extraPints} Extra Cobbler ${extraPints === 1 ? 'Pint' : 'Pints'}`, price: cobblerPintCost, weigh: false });
@@ -984,12 +993,16 @@
       warnParts.push(`${rem8oz} Extra 8 oz Cobbler (+$${cobbler8ozCost.toFixed(2)})`);
     }
 
+    const reasonText = (plate.fullSidesNoFreeCobbler && regSideTotal >= (plate.maxSides || 4))
+      ? `when ${regSideTotal} sides (8 oz equivs) are chosen — cobbler not included`
+      : `over the ${maxDessertSlots} included`;
+
     return {
-      maxD,
+      maxD: effectiveMaxD,
       extraTotal,
       extraCost: totalCost,
       lines,
-      warningText: `WARNING: ${extraTotal} extra ${extraTotal === 1 ? 'dessert' : 'desserts'} over the ${maxD} included — ${warnParts.join(' + ')}.`
+      warningText: `WARNING: ${extraTotal} extra ${extraTotal === 1 ? 'dessert' : 'desserts'} ${reasonText} — ${warnParts.join(' + ')}.`
     };
   }
 
@@ -1049,7 +1062,7 @@
       return [
         { title: `Choose Pint Sides (${plate.maxSides} Total Pints Included w/ Cobblers • +$${plate.extraSidePrice.toFixed(2)}/extra)`, isSide: true, isPint: true, isDessertSide: false, items: sideItems },
         { title: `Choose Pint Cobblers (Counts Toward ${plate.maxSides} Included Pints • +$${plate.extraDessertPrice.toFixed(2)}/extra)`, isSide: true, isPint: true, isDessertSide: true, items: cobblerItems },
-        { title: `Add Cinnamon Buns ($${CINNA_BUN_PRICE.toFixed(2)} Each — Not a Pint • Tap # to Type Quantity)`, isBakeryAddon: true, items: ["Cinnamon Buns"] },
+        { title: `Add Cinnamon Rolls ($${CINNA_ROLL_PRICE.toFixed(2)} Each — Not a Pint • Tap # to Type Quantity)`, isBakeryAddon: true, items: ["Cinnamon Rolls"] },
         { title: `Choose Bread (${plate.maxBread} Included — +$${ROLL_PRICE.toFixed(2)}/extra Roll, +$${CORNBREAD_PRICE.toFixed(2)}/extra Cornbread)`, isBread: true, items: ["Yeast Rolls", "Cornbread"] },
         freeCondimentSection,
         extraMeatSection
@@ -1059,10 +1072,16 @@
     const maxS = plate.maxSides || 4;
     const maxB = plate.maxBread || 2;
     const maxD = getIncludedDessertsForPlate(plate, regSideTotal);
+    const maxC = getIncludedCobblersForPlate(plate, regSideTotal);
     const extraNote = plate.extraSidePrice ? ` • +$${plate.extraSidePrice.toFixed(2)}/extra 8 oz (2× = $${SIDE_16OZ_PRICE.toFixed(2)} Pint)` : '';
-    const dessertExtraNote = maxD > 0
-      ? ` (${maxD} Included • +$${CINNA_BUN_PRICE.toFixed(2)}/extra Bun, +$${DESSERT_8OZ_PRICE.toFixed(2)}/extra 8 oz Cobbler)`
-      : ` (0 Included w/ 5 Sides • +$${CINNA_BUN_PRICE.toFixed(2)}/Bun, +$${DESSERT_8OZ_PRICE.toFixed(2)}/8 oz Cobbler)`;
+    let dessertExtraNote;
+    if (plate.fullSidesNoFreeCobbler && regSideTotal >= maxS) {
+      dessertExtraNote = ` (Cobbler Extra w/ ${regSideTotal} Sides • +$${DESSERT_8OZ_PRICE.toFixed(2)}/8 oz Cobbler, +$${CINNA_ROLL_PRICE.toFixed(2)}/Roll)`;
+    } else if (maxD > 0) {
+      dessertExtraNote = ` (${maxD} Included${maxC === 0 ? ' — Cobbler Extra' : ''} • +$${CINNA_ROLL_PRICE.toFixed(2)}/extra Roll, +$${DESSERT_8OZ_PRICE.toFixed(2)}/extra 8 oz Cobbler)`;
+    } else {
+      dessertExtraNote = ` (0 Included w/ 5 Sides • +$${CINNA_ROLL_PRICE.toFixed(2)}/Roll, +$${DESSERT_8OZ_PRICE.toFixed(2)}/8 oz Cobbler)`;
+    }
     const sections = [
       { title: "Choose Meat (1/2 lb — Select 1)", isMeat: true, singleSelect: true, isSide: false, items: meatItems },
       { title: `Choose 8 oz Sides (${maxS} Included — 2 of Same Side = 1 Pint${extraNote})`, isSide: true, isDessertSide: false, items: sideItems },
@@ -1177,9 +1196,13 @@
     renderBuilderUI();
   }
 
+  // Includes regular sides + any 8 oz / 16 oz dumplings added in the extras section
   function getCurrentRegSideTotal() {
     if (!pendingPlate || pendingPlate.familyMode) return 0;
-    return sideItems.reduce((sum, s) => sum + (builderCounts[s] || 0), 0);
+    const baseSides = sideItems.reduce((sum, s) => sum + (builderCounts[s] || 0), 0);
+    const dump8 = builderCounts["Extra:Dumplings8"] || 0;
+    const dump16 = (builderCounts["Extra:Dumplings16"] || 0) * 2;
+    return baseSides + dump8 + dump16;
   }
 
   function renderBuilderUI() {
@@ -1192,9 +1215,9 @@
     let hasMeatSection = false;
     let regSideTotal = 0;
     let dessertSideTotal = 0;
-    let plateCinnaBunCount = 0;
+    let plateCinnaRollCount = 0;
     let plateCobblerCount = 0;
-    let familyCinnaBunCount = 0;
+    let familyCinnaRollCount = 0;
     let rollsCount = 0;
     let cornbreadCount = 0;
     let condimentTotal = 0;
@@ -1284,11 +1307,11 @@
           else regSideTotal += count;
         }
         if (sec.isPlateDessert) {
-          if (key === "Cinnamon Buns") plateCinnaBunCount += count;
+          if (key === "Cinnamon Rolls") plateCinnaRollCount += count;
           else plateCobblerCount += count;
         }
-        if (sec.isBakeryAddon && key === "Cinnamon Buns") {
-          familyCinnaBunCount += count;
+        if (sec.isBakeryAddon && key === "Cinnamon Rolls") {
+          familyCinnaRollCount += count;
         }
         if (sec.isBread) {
           if (key === "Yeast Rolls") rollsCount += count;
@@ -1312,8 +1335,8 @@
         } else if (isKeyboardQty) {
           if (key === "Yeast Rolls") priceSubHtml = `<span class="price-sub">Tap # to type ($${ROLL_PRICE.toFixed(2)}/extra)</span>`;
           else if (key === "Cornbread") priceSubHtml = `<span class="price-sub">Tap # to type ($${CORNBREAD_PRICE.toFixed(2)}/extra)</span>`;
-          else if (sec.isBakeryAddon) priceSubHtml = `<span class="price-sub">Tap # to type (+$${CINNA_BUN_PRICE.toFixed(2)}/ea)</span>`;
-          else priceSubHtml = `<span class="price-sub">Tap # to type ($${CINNA_BUN_PRICE.toFixed(2)}/extra)</span>`;
+          else if (sec.isBakeryAddon) priceSubHtml = `<span class="price-sub">Tap # to type (+$${CINNA_ROLL_PRICE.toFixed(2)}/ea)</span>`;
+          else priceSubHtml = `<span class="price-sub">Tap # to type ($${CINNA_ROLL_PRICE.toFixed(2)}/extra)</span>`;
         }
 
         const escapedKey = escapeJsSingleQuote(key);
@@ -1381,10 +1404,10 @@
       counterGroup.appendChild(breadPill);
     }
 
-    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaBunCount, plateCobblerCount, regSideTotal);
+    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaRollCount, plateCobblerCount, regSidesSelected);
     if (pendingPlate && pendingPlate.maxDesserts && !pendingPlate.familyMode) {
       const maxD = extraDessertCalc.maxD;
-      const plateDessertTotal = plateCinnaBunCount + plateCobblerCount;
+      const plateDessertTotal = plateCinnaRollCount + plateCobblerCount;
       const dessertPill = document.createElement('span');
       dessertPill.className = `counter-pill ${extraDessertCalc.extraTotal > 0 ? 'over-limit' : 'dessert-pill'}`;
       dessertPill.innerText = extraDessertCalc.extraCost > 0
@@ -1393,12 +1416,12 @@
       counterGroup.appendChild(dessertPill);
     }
 
-    const familyCinnaBunCost = +(familyCinnaBunCount * CINNA_BUN_PRICE).toFixed(2);
-    if (familyCinnaBunCount > 0) {
-      const bunPill = document.createElement('span');
-      bunPill.className = 'counter-pill dessert-pill';
-      bunPill.innerText = `Cinnamon Buns: ${familyCinnaBunCount} (+$${familyCinnaBunCost.toFixed(2)})`;
-      counterGroup.appendChild(bunPill);
+    const familyCinnaRollCost = +(familyCinnaRollCount * CINNA_ROLL_PRICE).toFixed(2);
+    if (familyCinnaRollCount > 0) {
+      const rollPill = document.createElement('span');
+      rollPill.className = 'counter-pill dessert-pill';
+      rollPill.innerText = `Cinnamon Rolls: ${familyCinnaRollCount} (+$${familyCinnaRollCost.toFixed(2)})`;
+      counterGroup.appendChild(rollPill);
     }
 
     const extraCondimentCount = Math.max(0, condimentTotal - FREE_CONDIMENT_LIMIT);
@@ -1452,7 +1475,7 @@
     }
 
     const totalBtnPrice = pendingPlate
-      ? +(pendingPlate.price + extraCalc.extraCost + extraBreadCalc.extraCost + extraDessertCalc.extraCost + familyCinnaBunCost + extraCondimentCost + extraPricedAddonCost + drinkUpcharge).toFixed(2)
+      ? +(pendingPlate.price + extraCalc.extraCost + extraBreadCalc.extraCost + extraDessertCalc.extraCost + familyCinnaRollCost + extraCondimentCost + extraPricedAddonCost + drinkUpcharge).toFixed(2)
       : 0;
     const weighSuffix = weighedAddonCount > 0 ? ' + Weigh' : '';
     document.getElementById('confirmPlateBtn').innerText = `Add to Ticket ($${totalBtnPrice.toFixed(2)}${weighSuffix})`;
@@ -1476,7 +1499,7 @@
     const mods = [];
     let regSideTotal = 0;
     let dessertSideTotal = 0;
-    let plateCinnaBunCount = 0;
+    let plateCinnaRollCount = 0;
     let plateCobblerCount = 0;
     let rollsCount = 0;
     let cornbreadCount = 0;
@@ -1552,10 +1575,10 @@
         } else if (sec.isBakeryAddon) {
           const count = builderCounts[item] || 0;
           if (count > 0) {
-            const lineCost = +(count * CINNA_BUN_PRICE).toFixed(2);
+            const lineCost = +(count * CINNA_ROLL_PRICE).toFixed(2);
             const labelText = count > 1
               ? `+${count}x ${item}`
-              : `+1 Cinnamon Bun`;
+              : `+1 Cinnamon Roll`;
             extraPriceLines.push({ label: labelText, price: lineCost, weigh: false });
           }
         } else {
@@ -1566,7 +1589,7 @@
               else regSideTotal += count;
             }
             if (sec.isPlateDessert) {
-              if (item === "Cinnamon Buns") plateCinnaBunCount += count;
+              if (item === "Cinnamon Rolls") plateCinnaRollCount += count;
               else plateCobblerCount += count;
             }
             if (sec.isBread) {
@@ -1591,7 +1614,7 @@
     const extraBreadCalc = calculateExtraBread(pendingPlate, rollsCount, cornbreadCount);
     extraBreadCalc.lines.forEach(l => extraPriceLines.push(l));
 
-    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaBunCount, plateCobblerCount, regSideTotal);
+    const extraDessertCalc = calculateExtraPlateDesserts(pendingPlate, plateCinnaRollCount, plateCobblerCount, regSidesForRules);
     extraDessertCalc.lines.forEach(l => extraPriceLines.push(l));
 
     const extraCondimentCount = Math.max(0, condimentTotal - FREE_CONDIMENT_LIMIT);
