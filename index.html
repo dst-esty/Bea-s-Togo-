@@ -101,6 +101,8 @@
     line-height: 1.2;
   }
   .menu-btn:hover { background: #a80000; }
+  .menu-btn.thanksgiving { background: #9a3412; border: 1.5px solid #f59e0b; }
+  .menu-btn.thanksgiving:hover { background: #b45309; }
   .menu-btn.bulk { background: #1e4d2b; }
   .menu-btn.bulk:hover { background: #29663a; }
   .menu-btn.side { background: #2c5282; }
@@ -445,7 +447,7 @@
       <input type="text" id="custPhone" placeholder="Phone Number" oninput="updateTicket()">
     </div>
 
-    <div class="section-title">1. Carry-Out Meals & Family Packages (Tap to Build)</div>
+    <div class="section-title">1. Carry-Out Meals, Thanksgiving Specials & Family Packages</div>
     <div class="menu-grid" id="mealGrid"></div>
 
     <div class="section-title">2. Meats by the Pound, Piece & Wings (All Meats Weighed in Back)</div>
@@ -616,6 +618,43 @@
   ];
 
   const meals = [
+    {
+      name: "Thanksgiving To-Go Plate",
+      price: 25.00,
+      btnClass: "thanksgiving",
+      subLabel: "$25.00 • No Subs/Add-Ons",
+      fixedMods: [
+        "Smoked Turkey & Baked Ham",
+        "1 Piece of Bea's Chicken",
+        "Cornbread Dressing & Giblet Gravy",
+        "Green Beans",
+        "Sweet Potato Soufflé",
+        "Macaroni & Cheese",
+        "Cranberry Sauce (2 oz.)",
+        "Yeast Roll",
+        "8 oz. Cobbler (Kitchen's Choice Pecan or Peach)",
+        "Sweet Tea Included",
+        "NO SUBSTITUTIONS / NO ADD ONS"
+      ]
+    },
+    {
+      name: "Thanksgiving Senior To-Go Plate",
+      price: 15.00,
+      btnClass: "thanksgiving",
+      subLabel: "$15.00 • No Subs/Add-Ons",
+      fixedMods: [
+        "One Rib Piece of Chicken",
+        "Smoked Turkey (1 Slice)",
+        "Baked Ham (1 Slice)",
+        "Cornbread Dressing & Giblet Gravy",
+        "Green Beans",
+        "Cranberry Sauce (2 oz.)",
+        "Yeast Roll",
+        "8 oz. Cobbler (Kitchen's Choice Pecan or Peach)",
+        "Sweet Tea Included",
+        "NO SUBSTITUTIONS / NO ADD ONS"
+      ]
+    },
     { name: "To-Go Dinner (Fountain/Tea)", price: 16.25, build: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fullSidesNoFreeCobbler: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
     { name: "To-Go Plate (20oz Drink)", price: 18.00, build: true, includes20oz: true, maxSides: 4, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fullSidesNoFreeCobbler: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
     { name: "Veg Plate", price: 13.25, build: true, noMeat: true, maxSides: 5, extraSidePrice: SIDE_8OZ_PRICE, extraPintPrice: SIDE_16OZ_PRICE, extraUnit: "8 oz Side", maxBread: 2, maxDesserts: 1, fiveSidesNoFreeDessert: true, extraDessert8Price: DESSERT_8OZ_PRICE, extraDessertPintPrice: DESSERT_16OZ_PRICE },
@@ -1100,13 +1139,24 @@
       const btn = document.createElement('button');
       const cls = item.btnClass || extraClass;
       btn.className = `menu-btn ${cls}`;
-      let priceLabel = item.unitPrice !== undefined ? `$${item.unitPrice.toFixed(2)}/ea` : `$${(item.price || 0).toFixed(2)}`;
+      let priceLabel = item.subLabel
+        ? item.subLabel
+        : (item.unitPrice !== undefined ? `$${item.unitPrice.toFixed(2)}/ea` : `$${(item.price || 0).toFixed(2)}`);
       if (item.weighInBack && item.rate) priceLabel = `$${item.rate.toFixed(2)}/lb • Weigh`;
       else if (item.weighInBack) priceLabel = 'Weigh in back';
-      else if (item.unitPrice === undefined && item.price === 0) priceLabel = 'Enter Price';
+      else if (!item.subLabel && item.unitPrice === undefined && item.price === 0) priceLabel = 'Enter Price';
       btn.innerHTML = `${item.name}<span>${priceLabel}</span>`;
       btn.onclick = () => {
-        if (item.build) {
+        if (item.fixedMods) {
+          cart.push({
+            name: item.name,
+            price: item.price,
+            weigh: false,
+            locked: true,
+            mods: item.fixedMods.map(label => ({ label, price: 0, weigh: false, locked: true }))
+          });
+          updateTicket();
+        } else if (item.build) {
           openBuilder(item);
         } else if (item.pickType) {
           openSidePicker(item);
@@ -1692,8 +1742,11 @@
         if (isWeigh) {
           weighedLines.push(cleanWeighedLabel(text));
         }
+        const removeBtn = (typeof m === 'object' && m.locked)
+          ? ''
+          : `<span class="remove-x" onclick="removeMod(${i}, ${mIdx})">[x]</span>`;
         const rightCol = mPrice > 0 ? `<span>+$${mPrice.toFixed(2)}</span>` : '';
-        return `<div class="mod-line"><span><span class="remove-x" onclick="removeMod(${i}, ${mIdx})">[x]</span>- ${text}</span>${rightCol}</div>`;
+        return `<div class="mod-line"><span>${removeBtn}- ${text}</span>${rightCol}</div>`;
       }).join('');
 
       const itemPriceDisplay = item.weigh ? '' : `$${item.price.toFixed(2)}`;
